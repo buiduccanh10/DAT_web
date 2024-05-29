@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <table border="1" id="data-table">
+        <thead>
+            <tr>
+                <th>STT</th>
+                <th>Mã Học Viên</th>
+                <th>Họ Tên</th>
+                <th>Ngày Sinh</th>
+                <th>Giới Tính</th>
+                <th>Số CMT</th>
+                <th>Ngày Cấp CMT</th>
+                <th>Nơi Cấp CMT</th>
+                <th>Ngày Nhận Hồ Sơ</th>
+                <th>Số GPLX</th>
+                <th>Hạng GPLX</th>
+                <th>Nơi Cấp GPLX</th>
+                <th>Ảnh</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{#each student}}
+            <tr>
+                <td>{{this.STT}}</td>
+                <td>{{ this.MaHocVien}}</td>
+                <td>{{ this.HoTen}}</td>
+                <td>{{ this.NgaySinh}}</td>
+                <td>{{ this.GioiTinh}}</td>
+                <td>{{ this.SoCMT}}</td>
+                <td>{{ this.NgayCapCMT}}</td>
+                <td>{{ this.NoiCapCMT}}</td>
+                <td>{{ this.NgayNhanHoSo}}</td>
+                <td>{{ this.SoGPLX}}</td>
+                <td>{{ this.HangGPLX}}</td>
+                <td>{{ this.NoiCapGPLX}}</td>
+                <td><img src="data:image/jpeg;base64,{{ this.Anh}}" style="height: 130px; width:100px;" alt="Ảnh"></td>
+            </tr>
+            {{/each}}
+        </tbody>
+    </table>
+</body>
+</html>

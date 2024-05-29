@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+    .spinner-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.8);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+        display: none;
+    }
+    .spinner {
+        border: 16px solid #f3f3f3;
+        border-radius: 50%;
+        border-top: 16px solid #3498db;
+        width: 120px;
+        height: 120px;
+        animation: spin 2s linear infinite;
+    }
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+</style>
+
+</head>
+<body>
+    {{#if dat_ss}}
+    {{!-- <form action="/computeData" method="get">
+        <button type="submit" class="w3-btn w3-grey w3-border w3-border-grey w3-round">Tổng hợp</button>
+    </form> --}}
+
+    <form id="computeDataForm" action="/computeData" method="get">
+        <button type="submit" class="w3-btn w3-grey w3-border w3-border-grey w3-round">Tổng hợp</button>
+    </form>
+
+    <button class="w3-btn w3-green w3-border w3-border-green w3-round">Xuất Excel</button>
+
+    <div id="pagination">
+        <button onclick="previousPage()" id="prevBtn" disabled>Previous</button>
+        {{#each pages}}
+            <button onclick="showPage({{this}})">{{this}}</button>
+        {{/each}}
+        <button onclick="nextPage()" id="nextBtn">Next</button>
+    </div>
+
+    <table border="1" id="dataTable">
+        <tr>
+            <th>STT</th>
+            <th>Mã Phiên</th>
+            <th>Tỉ lệ</th>
+            <th>Khóa học</th>
+            <th>Mã học viên</th>
+            <th>Họ tên</th>
+            <th>Họ tên giáo viên</th>
+            <th>Xe tập lái</th>
+            <th>Ngày đào tạo</th>
+            <th>Thời gian</th>
+            <th>Quãng đường</th>
+            <th>Trạng thái</th>
+            <th>Lý do</th>
+        </tr>
+        {{#each dat_ss}}
+            <tr>
+                <td>{{ this.STT}}</td>
+                <td>{{ this.MaPhien}}</td>
+                <td>{{ this.TiLe}}</td>
+                <td>{{ this.KhoaHoc}}</td>
+                <td>{{ this.MaHocVien}}</td>
+                <td>{{ this.HoTen}}</td>
+                <td>{{ this.HoTenGiaoVien}}</td>
+                <td>{{ this.XeTapLai}}</td>
+                <td>{{ this.NgayDaoTao}}</td>
+                <td>{{ this.ThoiGian}}</td>
+                <td>{{ this.QuangDuong}}</td>
+                {{#if this.TrangThai}}
+                    <td style="color: red;">Bảo lưu</td>
+                {{else}}
+                    <td></td>
+                {{/if}}
+                <td>{{ this.LyDoLoai}}</td>
+            </tr>
+        {{/each}}
+    </table>
+    {{/if}}
+
+    <div class="spinner-overlay" id="spinnerOverlay">
+    <div class="spinner"></div>
+
+</div>
+
+</body>
+</html>
+
+<script>
+    const computeDataForm = document.getElementById('computeDataForm');
+    const spinnerOverlay = document.getElementById('spinnerOverlay');
+
+    computeDataForm.addEventListener('submit', function(event) {
+        spinnerOverlay.style.display = 'flex';
+    });
+
+    const table = document.getElementById('dataTable');
+    const pagination = document.getElementById('pagination');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+
+    const rowsPerPage = 50;
+    const rowCount = table.rows.length - 1; // Excluding the header row
+
+    let totalPages = Math.ceil(rowCount / rowsPerPage);
+    if (totalPages === 0) totalPages = 1;
+
+    let currentPage = 1;
+
+    function showPage(pageNumber) {
+        currentPage = pageNumber;
+        const startIndex = (pageNumber - 1) * rowsPerPage + 1;
+        const endIndex = pageNumber * rowsPerPage;
+
+        for (let i = 1; i <= rowCount; i++) {
+            if (i >= startIndex && i <= endIndex) {
+                table.rows[i].style.display = '';
+            } else {
+                table.rows[i].style.display = 'none';
+            }
+        }
+
+        updatePaginationButtons();
+    }
+
+    function previousPage() {
+        if (currentPage > 1) {
+            showPage(currentPage - 1);
+        }
+    }
+
+    function nextPage() {
+        if (currentPage < totalPages) {
+            showPage(currentPage + 1);
+        }
+    }
+
+    function updatePaginationButtons() {
+        prevBtn.disabled = currentPage === 1;
+        nextBtn.disabled = currentPage === totalPages;
+    }
+
+    // Generate page numbers
+    const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
+
+
+    // Show the first page by default
+    showPage(1);
+</script>
+

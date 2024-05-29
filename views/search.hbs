@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{title}}</title>
+    <style>
+        /* CSS cho đẹp */
+    </style>
+</head>
+<body>
+    {{#if count_student}}
+    <p>Tổng số học viên: {{count_student}}</p>
+    <p>Số học viên đã qua: {{count_student_pass}}</p>
+    <p>Số học viên không qua: {{count_student_loss}}</p>
+
+    <!-- Hiển thị tổng số phiên học -->
+    <p>Tổng số phiên học: {{count_session}}</p>
+    <p>Số phiên học đã qua: {{count_session_pass}}</p>
+    <p>Số phiên học không qua: {{count_session_loss}}</p>
+    {{/if}}
+    <h1>Search</h1>
+    <form action="/search/results" method="GET">
+        <label for="query">Nhập Họ tên, Mã học viên hoặc Số CCCD:</label>
+        <input style="width:20%;" type="text" id="query" name="query" placeholder="Nhập Họ tên, mã học viên, số CMT..." value="{{query}}">
+        <button type="submit" class="w3-btn w3-white w3-border w3-border-blue w3-round">Search</button>
+    </form>
+
+    <!-- Nếu có kết quả, hiển thị bảng -->
+    {{#if results.length}}
+        <h2>Kết quả tìm kiếm</h2>
+        <table border="1">
+            <thead>
+                <tr>
+                    <th>Ảnh</th>
+                    <th>Họ tên</th>
+                    <th>Mã học viên</th>
+                    <th>Ngày sinh</th>
+                    <th>Giới tính</th>
+                    <th>Số CMT</th>
+                    <th>Hạng</th>
+                    <th>Tổng thời gian B11</th>
+                    <th>Tổng quãng đường B11</th>
+                    <th>Tổng quãng đường sáng</th>
+                    <th>Tổng thời gian sáng</th>
+                    <th>Tổng quãng đường tối</th>
+                    <th>Tổng thời gian tối</th>
+                    <th>Tổng thời gian</th>
+                    <th>Tổng quãng đường</th>
+                    <th>Trạng thái</th>
+                    <th>Lý do</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{#each results}}
+                    <tr>
+                        <td><img src="data:image/jpeg;base64,{{ this.Anh}}" style="height: 130px; width:100px;" alt="Ảnh"></td>
+                        <td>{{this.HoTen}}</td>
+                        <td>{{ this.MaHocVien}}</td>
+                        <td>{{this.NgaySinh}}</td>
+                        <td>{{this.GioiTinh}}</td>
+                        <td>{{this.SoCMT}}</td>
+                        <td>{{this.Category}}</td>
+                        <td>{{this.TongThoiGianXeSoTuDong}}</td>
+                        <td>{{this.TongQuangDuongXeSoTuDong}}</td>
+                        <td>{{this.TotalMorningDistance}}</td>
+                        <td>{{this.TotalMorningTime}}</td>
+                        <td>{{this.TotalEveningDistance}}</td>
+                        <td>{{this.TotalEveningTime}}</td>
+                        <td>{{this.TotalDuration}}</td>
+                        <td>{{this.TotalDistance}}</td>
+                        {{#if this.TrangThai}}
+                            <td style="color: red;">Bảo lưu</td>
+                        {{else}}
+                            <td>Đạt</td>
+                        {{/if}}
+                        <td>{{this.LyDo}}</td>
+                    </tr>
+                {{/each}}
+            </tbody>
+        </table> 
+    {{else}}
+        <p>Không tìm thấy kết quả phù hợp.</p>
+    {{/if}}
+
+    <!-- Nếu có phiên, hiển thị bảng -->
+    {{#if sessions.length}}
+        <h2>Các phiên liên quan</h2>
+        <table border="1">
+            <thead>
+                <tr>
+                    <th>STT</th>
+                    <th>Mã Phiên</th>
+                    <th>Họ tên</th>
+                    <th>Họ tên Giáo viên</th>
+                    <th>Xe Tập Lái</th>
+                    <th>Ngày Đào Tạo</th>
+                    <th>Thời Gian</th>
+                    <th>Quãng Đường</th>
+                    <th>Trạng Thái</th>
+                    <th>Lý Do Loại</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{#each sessions}}
+                    <tr>
+                        <td>{{this.STT}}</td>
+                        <td>{{this.MaPhien}}</td>
+                        <td>{{this.HoTen}}</td>
+                        <td>{{this.HoTenGiaoVien}}</td>
+                        <td>{{this.XeTapLai}}</td>
+                        <td>{{this.NgayDaoTao}}</td>
+                        <td>{{this.ThoiGian}}</td>
+                        <td>{{this.QuangDuong}}</td>
+                        {{#if this.TrangThai}}
+                        <td style="color: red;">Bảo lưu</td>
+                        {{else}}
+                        <td>Đạt</td>
+                        {{/if}}
+                        <td>{{this.LyDoLoai}}</td>
+                    </tr>
+                {{/each}}
+            </tbody>
+        </table>
+    {{/if}}
+</body>
+</html>
