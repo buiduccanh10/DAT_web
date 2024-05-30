@@ -472,40 +472,108 @@ router.post("/save-dat-session", async (req, res) => {
     }
   }
 
+  // const teacherMap = new Map();
+
+  // sessions.forEach((session) => {
+  //   const dateTime = moment(session.NgayDaoTao, "DD/MM/YY HH:mm").format(
+  //     "DD/MM/YY HH:mm"
+  //   );
+  //   const teacher = session.HoTenGiaoVien;
+
+  //   if (!teacherMap.has(dateTime)) {
+  //     teacherMap.set(dateTime, new Map());
+  //   }
+
+  //   const dateTimeMap = teacherMap.get(dateTime);
+
+  //   if (!dateTimeMap.has(teacher)) {
+  //     dateTimeMap.set(teacher, []);
+  //   }
+
+  //   dateTimeMap.get(teacher).push(session);
+  // });
+
+  // // Kiểm tra gian lận trùng thầy giáo
+  // for (const [dateTime, teacherSessionsMap] of teacherMap.entries()) {
+  //   for (const [teacher, teacherSessions] of teacherSessionsMap.entries()) {
+  //     if (teacherSessions.length > 1) {
+  //       const reason = `Trùng thầy giáo`;
+
+  //       teacherSessions.forEach((session) => {
+  //         session.TrangThai = true;
+  //         session.LyDoLoai = session.LyDoLoai
+  //           ? `${session.LyDoLoai}, ${reason}`
+  //           : reason;
+  //         updates.push(session);
+  //       });
+  //     }
+  //   }
+  // }
+
   const teacherMap = new Map();
 
+  // Group sessions by teacher and date
   sessions.forEach((session) => {
-    const dateTime = moment(session.NgayDaoTao, "DD/MM/YY HH:mm").format(
-      "YYYY-MM-DD HH:mm"
-    );
     const teacher = session.HoTenGiaoVien;
+    const date = moment(session.NgayDaoTao, "DD/MM/YY").format("DD/MM/YY");
+    const startDateTime = moment(session.NgayDaoTao, "DD/MM/YY HH:mm");
+    const endDateTime = startDateTime.clone().add(parseDuration(session.ThoiGian), 'minutes');
 
-    if (!teacherMap.has(dateTime)) {
-      teacherMap.set(dateTime, new Map());
+    if (!teacherMap.has(teacher)) {
+      teacherMap.set(teacher, new Map());
     }
 
-    const dateTimeMap = teacherMap.get(dateTime);
+    const dateMap = teacherMap.get(teacher);
 
-    if (!dateTimeMap.has(teacher)) {
-      dateTimeMap.set(teacher, []);
+    if (!dateMap.has(date)) {
+      dateMap.set(date, []);
     }
 
-    dateTimeMap.get(teacher).push(session);
+    dateMap.get(date).push({
+      startDateTime,
+      endDateTime,
+      bienSoXe: session.XeTapLai,
+      session,
+    });
   });
 
-  // Kiểm tra gian lận trùng thầy giáo
-  for (const [dateTime, teacherSessionsMap] of teacherMap.entries()) {
-    for (const [teacher, teacherSessions] of teacherSessionsMap.entries()) {
-      if (teacherSessions.length > 1) {
-        const reason = `Trùng thầy giáo`;
+  for (const [teacher, dateMap] of teacherMap.entries()) {
+    for (const [date, sessions] of dateMap.entries()) {
+      for (let i = 0; i < sessions.length; i++) {
+        for (let j = i + 1; j < sessions.length; j++) {
+          const session1 = sessions[i];
+          const session2 = sessions[j];
 
-        teacherSessions.forEach((session) => {
-          session.TrangThai = true;
-          session.LyDoLoai = session.LyDoLoai
-            ? `${session.LyDoLoai}, ${reason}`
-            : reason;
-          updates.push(session);
-        });
+          if (
+            session1.bienSoXe !== session2.bienSoXe &&
+            isOverlapping(
+              session1.startDateTime,
+              session1.endDateTime,
+              session2.startDateTime,
+              session2.endDateTime
+            )
+          ) {
+            const reason = "Giáo viên có phiên trùng lặp";
+
+            if (!session1.session.TrangThai) {
+              session1.session.TrangThai = true;
+              session1.session.LyDoLoai = reason;
+              updates.push(session1.session);
+            } else if (!session1.session.LyDoLoai.includes(reason)) {
+              session1.session.LyDoLoai += `, ${reason}`;
+              updates.push(session1.session);
+            }
+
+            if (!session2.session.TrangThai) {
+              session2.session.TrangThai = true;
+              session2.session.LyDoLoai = reason;
+              updates.push(session2.session);
+            } else if (!session2.session.LyDoLoai.includes(reason)) {
+              session2.session.LyDoLoai += `, ${reason}`;
+              updates.push(session2.session);
+            }
+          }
+        }
       }
     }
   }
@@ -524,6 +592,10 @@ router.post("/save-dat-session", async (req, res) => {
     res.status(500).send("Internal Server Error");
   }
 });
+
+function isOverlapping(start1, end1, start2, end2) {
+  return (start1 < end2 && start2 < end1);
+}
 
 router.post("/uploadxml", upload.single("file"), (req, res) => {
   const filePath = req.file.path;
