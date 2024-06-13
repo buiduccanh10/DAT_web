@@ -61,10 +61,10 @@ router.get("/allDat_session", async function (req, res, next) {
 
   // dat_ss.forEach((col) => {
   //   col.TiLe = Math.round(parseFloat(col.TiLe));
-  //   const tiLeLessThan90 = parseInt(col.TiLe) < 90;
+  //   const tiLeLessThan75 = parseInt(col.TiLe) < 90;
   //   const durationGreaterThanOrEqualTo4Hours =
   //     isDurationGreaterThan4Hours(col.ThoiGian);
-  //   col.TrangThai = tiLeLessThan90 || durationGreaterThanOrEqualTo4Hours;
+  //   col.TrangThai = tiLeLessThan75 || durationGreaterThanOrEqualTo4Hours;
   // });
 
   dat_ss.sort((a, b) => {
@@ -162,19 +162,19 @@ router.post("/uploadCar", upload.single("file"), (req, res) => {
 
 //   // dat_ss.forEach((col) => {
 //   //   col.TiLe = Math.round(parseFloat(col.TiLe));
-//   //   const tiLeLessThan90 = parseInt(col.TiLe) < 90;
+//   //   const tiLeLessThan75 = parseInt(col.TiLe) < 90;
 //   //   const durationGreaterThanOrEqualTo4Hours =
 //   //     isDurationGreaterThan4Hours(col.ThoiGian);
-//   //   col.TrangThai = tiLeLessThan90 || durationGreaterThanOrEqualTo4Hours;
+//   //   col.TrangThai = tiLeLessThan75 || durationGreaterThanOrEqualTo4Hours;
 //   // });
 
 //   data.forEach(async (item) => {
 //     item["TiLe"] = Math.round(parseFloat(item["TiLe"]));
-//     const tiLeLessThan90 = parseInt(item["TiLe"]) < 90;
+//     const tiLeLessThan75 = parseInt(item["TiLe"]) < 90;
 //     const durationGreaterThanOrEqualTo4Hours = isDurationGreaterThan4Hours(
 //       item["ThoiGian"]
 //     );
-//     const TrangThai = tiLeLessThan90 || durationGreaterThanOrEqualTo4Hours;
+//     const TrangThai = tiLeLessThan75 || durationGreaterThanOrEqualTo4Hours;
 //     const newItem = new Dat_session({
 //       _id: item["MaPhien"],
 //       TrangThai: TrangThai,
@@ -249,7 +249,7 @@ router.post("/uploadCar", upload.single("file"), (req, res) => {
 
 //     // Kiểm tra điều kiện TiLe và ThoiGian
 //     item["TiLe"] = Math.round(parseFloat(item["TiLe"]));
-//     const tiLeLessThan90 = parseInt(item["TiLe"]) < 90;
+//     const tiLeLessThan75 = parseInt(item["TiLe"]) < 90;
 //     const durationGreaterThanOrEqualTo4Hours = isDurationGreaterThan4Hours(
 //       item["ThoiGian"]
 //     );
@@ -258,7 +258,7 @@ router.post("/uploadCar", upload.single("file"), (req, res) => {
 //     const lyDoLoaiList = [];
 
 //     // Kiểm tra các điều kiện và thêm lý do vào mảng
-//     if (tiLeLessThan90) {
+//     if (tiLeLessThan75) {
 //       lyDoLoaiList.push("Tỉ lệ dưới 90");
 //     }
 //     if (durationGreaterThanOrEqualTo4Hours) {
@@ -271,7 +271,7 @@ router.post("/uploadCar", upload.single("file"), (req, res) => {
 //     // Tạo một mục mới của Dat_session với các thông tin và lý do được cập nhật
 //     const newItem = new Dat_session({
 //       _id: item["MaPhien"],
-//       TrangThai: tiLeLessThan90 || durationGreaterThanOrEqualTo4Hours,
+//       TrangThai: tiLeLessThan75 || durationGreaterThanOrEqualTo4Hours,
 //       LyDoLoai: lyDoLoai,
 //       ...item,
 //     });
@@ -326,7 +326,7 @@ router.post("/save-dat-session", async (req, res) => {
     // Kiểm tra xem NgayDaoTao + ThoiGian nằm trong khoảng thời gian sáng hay tối không
     const ngayDaoTao = moment(item.NgayDaoTao, "DD/MM/YY HH:mm");
     const ketThucSang = moment(ngayDaoTao).set({
-      hour: 18,
+      hour: 17,
       minute: 59,
       second: 59,
     });
@@ -357,28 +357,39 @@ router.post("/save-dat-session", async (req, res) => {
     item.TotalMorningDistance = quangDuongSang.toFixed(2);
     item.TotalEveningDistance = quangDuongToi.toFixed(2);
 
+    const matchingCar = cars.find((car) => car.BienSoXe === item.XeTapLai);
+    // Tạo một mảng để lưu trữ các lý do
+    const lyDoLoaiList = [];
+
+    if (
+      matchingCar &&
+      matchingCar.LoaiHangXe === "B11" &&
+      ngayDaoTao.isAfter(ketThucSang) && !item.KhoaHoc.includes("B1")
+    ) {
+      lyDoLoaiList.push("Hạng của bạn không được đi B11 ban đêm");
+      item.TrangThai = true;
+    }
+
     // Kiểm tra điều kiện TiLe và ThoiGian
     item["TiLe"] = Math.round(parseFloat(item["TiLe"]));
-    const tiLeLessThan90 = parseInt(item["TiLe"]) < 90;
+    const tiLeLessThan75 = parseInt(item["TiLe"]) < 75;
     const durationGreaterThanOrEqualTo4Hours = isDurationGreaterThan4Hours(
       item["ThoiGian"]
     );
 
-    // Tạo một mảng để lưu trữ các lý do
-    const lyDoLoaiList = [];
-
     // Kiểm tra các điều kiện và thêm lý do vào mảng
-    if (tiLeLessThan90) {
-      lyDoLoaiList.push("Tỉ lệ dưới 90");
+    if (tiLeLessThan75) {
+      lyDoLoaiList.push("Tỉ lệ dưới 75%");
     }
     if (durationGreaterThanOrEqualTo4Hours) {
-      lyDoLoaiList.push("Thời gian quá 4h một ngày");
+      lyDoLoaiList.push("Quá 4h/phiên");
+    }
+    if (thoiGianPhut <= 5) {
+      lyDoLoaiList.push("Chưa đạt thời gian tối thiểu");
     }
 
     // Kết hợp các lý do thành một chuỗi
     const lyDoLoai = lyDoLoaiList.join(", ");
-
-    const matchingCar = cars.find((car) => car.BienSoXe === item.XeTapLai);
 
     if (
       matchingCar &&
@@ -388,7 +399,7 @@ router.post("/save-dat-session", async (req, res) => {
       // Tạo một mục mới của Dat_session với các thông tin và lý do được cập nhật
       const newItem = new Dat_session({
         _id: item["MaPhien"],
-        TrangThai: tiLeLessThan90 || durationGreaterThanOrEqualTo4Hours,
+        TrangThai: tiLeLessThan75 || durationGreaterThanOrEqualTo4Hours || thoiGianPhut <= 5,
         LyDoLoai: lyDoLoai,
         ThoiGianXeTuDong: thoiGianPhut,
         QuangDuongXeTuDong: parseFloat(item.QuangDuong),
@@ -406,7 +417,7 @@ router.post("/save-dat-session", async (req, res) => {
       // Tạo một mục mới của Dat_session với các thông tin và lý do được cập nhật
       const newItem = new Dat_session({
         _id: item["MaPhien"],
-        TrangThai: tiLeLessThan90 || durationGreaterThanOrEqualTo4Hours,
+        TrangThai: tiLeLessThan75 || durationGreaterThanOrEqualTo4Hours || thoiGianPhut <= 5,
         LyDoLoai: lyDoLoai,
         ThoiGianXeTuDong: 0,
         QuangDuongXeTuDong: 0,
@@ -456,50 +467,12 @@ router.post("/save-dat-session", async (req, res) => {
 
   const updates = [];
 
-  for (const [studentId, dateMap] of studentMap.entries()) {
-    for (const [date, data] of dateMap.entries()) {
-      if (data.totalDuration > 600 || data.totalDistance > 400) {
-        const reason = `Ngày ${date} có tổng thời gian hoặc km quá giới hạn / ngày`;
+  // for (const [studentId, dateMap] of studentMap.entries()) {
+  //   for (const [date, data] of dateMap.entries()) {
+  //     if (data.totalDuration > 600 || data.totalDistance > 400) {
+  //       const reason = `Ngày ${date} có tổng thời gian hoặc km quá giới hạn / ngày`;
 
-        data.sessions.forEach((session) => {
-          session.TrangThai = true;
-          session.LyDoLoai = session.LyDoLoai
-            ? `${session.LyDoLoai}, ${reason}`
-            : reason;
-          updates.push(session);
-        });
-      }
-    }
-  }
-
-  // const teacherMap = new Map();
-
-  // sessions.forEach((session) => {
-  //   const dateTime = moment(session.NgayDaoTao, "DD/MM/YY HH:mm").format(
-  //     "DD/MM/YY HH:mm"
-  //   );
-  //   const teacher = session.HoTenGiaoVien;
-
-  //   if (!teacherMap.has(dateTime)) {
-  //     teacherMap.set(dateTime, new Map());
-  //   }
-
-  //   const dateTimeMap = teacherMap.get(dateTime);
-
-  //   if (!dateTimeMap.has(teacher)) {
-  //     dateTimeMap.set(teacher, []);
-  //   }
-
-  //   dateTimeMap.get(teacher).push(session);
-  // });
-
-  // // Kiểm tra gian lận trùng thầy giáo
-  // for (const [dateTime, teacherSessionsMap] of teacherMap.entries()) {
-  //   for (const [teacher, teacherSessions] of teacherSessionsMap.entries()) {
-  //     if (teacherSessions.length > 1) {
-  //       const reason = `Trùng thầy giáo`;
-
-  //       teacherSessions.forEach((session) => {
+  //       data.sessions.forEach((session) => {
   //         session.TrangThai = true;
   //         session.LyDoLoai = session.LyDoLoai
   //           ? `${session.LyDoLoai}, ${reason}`
@@ -509,6 +482,86 @@ router.post("/save-dat-session", async (req, res) => {
   //     }
   //   }
   // }
+  
+  for (const [studentId, dateMap] of studentMap.entries()) {
+    for (const [date, data] of dateMap.entries()) {
+      // Check if the day total duration or distance exceed limits
+      if (data.totalDuration > 600 || data.totalDistance > 400) {
+        let latestSession = null;
+        let latestEndTime = null;
+  
+        // Find the latest end time session in the day
+        for (const session of data.sessions) {
+          const endTime = moment(session.NgayDaoTao, "DD/MM/YY HH:mm"); // Assuming endDateTime in a different format as date and time combined
+          if (!latestEndTime || endTime.isAfter(latestEndTime)) {
+            latestSession = session;
+            latestEndTime = endTime;
+          }
+        }
+  
+        if (latestSession) {
+          const reason = `Ngày ${date} có tổng thời gian hoặc km quá giới hạn / ngày`;
+          // Update the last session in the day
+          latestSession.TrangThai = true;
+          latestSession.LyDoLoai = latestSession.LyDoLoai
+            ? `${latestSession.LyDoLoai}, ${reason}`
+            : reason;
+  
+          // Collect the updated session for database update
+          updates.push(latestSession);
+        }
+      }
+    }
+  }
+  
+  // Assuming you have grouped sessions as described above in studentMap
+for (const [studentId, dateMap] of studentMap.entries()) {
+  for (const [date, data] of dateMap.entries()) {
+    const sessions = data.sessions;
+
+    // Sort sessions by start time to ensure chronological order
+    sessions.sort((a, b) => {
+      const startA = moment(a.NgayDaoTao, "DD/MM/YY HH:mm");
+      const startB = moment(b.NgayDaoTao, "DD/MM/YY HH:mm");
+      return startA - startB;
+    });
+
+    // Check for breaks less than 15 minutes between sessions
+    for (let i = 0; i < sessions.length - 1; i++) {
+      const currentSession = sessions[i];
+      const nextSession = sessions[i + 1];
+
+      // Calculate time difference between sessions
+      const startCurrent = moment(currentSession.NgayDaoTao, "DD/MM/YY HH:mm");
+      const endCurrent = startCurrent.clone().add(parseDuration(currentSession.ThoiGian), 'minutes');
+      const startNext = moment(nextSession.NgayDaoTao, "DD/MM/YY HH:mm");
+
+      const breakTime = startNext.diff(endCurrent, 'minutes');
+
+      // If the break time is less than 15 minutes, mark session with issue
+      if (breakTime < 15) {
+        const reason = "Nghỉ giữa phiên < 15 phút";
+
+        if (!currentSession.TrangThai) {
+          currentSession.TrangThai = true;
+          currentSession.LyDoLoai = reason;
+        } else if (!currentSession.LyDoLoai.includes(reason)) {
+          currentSession.LyDoLoai += `, ${reason}`;
+        }
+        
+        if (!nextSession.TrangThai) {
+          nextSession.TrangThai = true;
+          nextSession.LyDoLoai = reason;
+        } else if (!nextSession.LyDoLoai.includes(reason)) {
+          nextSession.LyDoLoai += `, ${reason}`;
+        }
+
+        updates.push(currentSession);
+        updates.push(nextSession);
+      }
+    }
+  }
+}
 
   const teacherMap = new Map();
 
@@ -660,135 +713,6 @@ router.post("/save-data", (req, res) => {
 
   res.sendStatus(200);
 });
-
-// router.get("/computeData", async (req, res) => {
-//   const dat_ss = await Dat_session.find({ TrangThai: false });
-//   const studentMap = new Map();
-
-//   dat_ss.forEach((col) => {
-//     // const roundedTiLe = Math.round(parseFloat(col.TiLe));
-//     // const durationGreaterThanOrEqualTo4Hours = isDurationGreaterThan4Hours(
-//     //   col.ThoiGian
-//     // );
-//     // col.TrangThai = roundedTiLe < 90 || durationGreaterThanOrEqualTo4Hours;
-
-//     const studentId = col.MaHocVien;
-//     const sessionTime = parseDuration(col.ThoiGian);
-//     const sessionDistance = col.QuangDuong;
-
-//     if (!studentMap.has(studentId)) {
-//       studentMap.set(studentId, {
-//         totalMorningTime: 0,
-//         totalEveningTime: 0,
-//         totalMorningDistance: 0,
-//         totalEveningDistance: 0,
-//         totalDuration: 0,
-//         totalDistance: 0,
-//         sessions: [],
-//       });
-//     }
-
-//     const studentData = studentMap.get(studentId);
-//     const sessionStartTime = new Date(col.NgayDaoTao);
-//     const sessionEndTime = new Date(
-//       sessionStartTime.getTime() + sessionTime * 60 * 1000
-//     );
-
-//     if (sessionStartTime.getHours() >= 7 && sessionStartTime.getHours() < 19) {
-//       studentData.totalEveningTime += sessionTime;
-//       studentData.totalEveningDistance += sessionDistance;
-//     } else {
-//       studentData.totalMorningTime += sessionTime;
-//       studentData.totalMorningDistance += sessionDistance;
-//     }
-
-//     studentData.totalDuration += sessionTime;
-//     studentData.totalDistance += sessionDistance;
-//     studentData.sessions.push(col);
-//   });
-
-//   const updatedStudents = [];
-
-//   for (const [studentId, data] of studentMap.entries()) {
-//     // const student = await Student.findById({ _id: studentId });
-
-//     const studentSessions = data.sessions;
-//     let category = "Unknown";
-//     studentSessions.forEach((session) => {
-//       if (session.KhoaHoc.includes("B1")) {
-//         category = "B1";
-//       } else if (session.KhoaHoc.includes("B2")) {
-//         category = "B2";
-//       } else if (session.KhoaHoc.includes("C")) {
-//         category = "C";
-//       }
-//     });
-
-//     let studentStatus = false;
-
-//     if (category === "B1") {
-//       studentStatus =
-//         data.totalDuration < 12 ||
-//         data.totalDistance < 710 ||
-//         data.totalEveningTime < 4 ||
-//         data.totalEveningDistance < 110;
-//     } else if (category === "B2") {
-//       studentStatus =
-//         data.totalDuration < 20 ||
-//         data.totalDistance < 810 ||
-//         data.totalEveningTime < 4 ||
-//         data.totalEveningDistance < 140;
-//     } else if (category === "C") {
-//       studentStatus =
-//         data.totalDuration < 24 ||
-//         data.totalDistance < 825 ||
-//         data.totalEveningTime < 2.5 ||
-//         data.totalEveningDistance < 70;
-//     }
-
-//     updatedStudents.push({
-//       // Anh: student.Anh,
-//       MaHocVien: studentId,
-//       // HoTen: student.HoTen,
-//       // NgaySinh: student.NgaySinh,
-//       // GioiTinh: student.GioiTinh,
-//       TotalMorningTime: formatTime(data.totalMorningTime),
-//       TotalEveningTime: formatTime(data.totalEveningTime),
-//       TotalMorningDistance: data.totalMorningDistance,
-//       TotalEveningDistance: data.totalEveningDistance,
-//       TotalDuration: formatTime(data.totalDuration),
-//       TotalDistance: data.totalDistance,
-//       Category: category,
-//       TrangThai: studentStatus,
-//     });
-//   }
-
-//   // console.log(updatedStudents);
-
-//   await Total.create(updatedStudents);
-
-//   // await StudentSession.bulkWrite(
-//   //   updatedStudents.map((student) => ({
-//   //     updateOne: {
-//   //       filter: { MaHocVien: student.MaHocVien },
-//   //       update: {
-//   //         $set: {
-//   //           TotalMorningTime: student.TotalMorningTime,
-//   //           TotalEveningTime: student.TotalEveningTime,
-//   //           TotalMorningDistance: student.TotalMorningDistance,
-//   //           TotalEveningDistance: student.TotalEveningDistance,
-//   //           TotalDuration: student.TotalDuration,
-//   //           TotalDistance: student.TotalDistance,
-//   //           Category: student.Category,
-//   //           TrangThai: student.TrangThai,
-//   //         },
-//   //       },
-//   //     },
-//   //   }))
-//   // );
-
-//   res.json({ message: "Data computed and saved successfully" });
-// });
 
 router.get("/computeData", async (req, res) => {
   try {
