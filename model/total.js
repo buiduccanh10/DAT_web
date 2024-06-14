@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 
 const totalSchema = new mongoose.Schema({
   Anh: String,
+  KhoaHoc: String,
   MaHocVien: String,
   HoTen: String,
   NgaySinh: String,

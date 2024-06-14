@@ -17,24 +17,17 @@ router.get("/", function (req, res, next) {
 });
 
 router.get("/search", async function (req, res, next) {
-  // const count_student = await Total.find({});
-  // const count_student_pass = await Total.find({ TrangThai: false });
-  // const count_student_loss = await Total.find({ TrangThai: true });
-  // const count_session = await Dat_session.find({});
-  // const count_session_pass = await Dat_session.find({ TrangThai: false });
-  // const count_session_loss = await Dat_session.find({ TrangThai: true });
+  const student_pass = await Total.find({ TrangThai: false });
+  const student_fail = await Total.find({ TrangThai: true });
 
   res.render("search", {
     title: "Search",
     query: "",
     results: [],
     sessions: [],
-    // count_student: count_student.length,
-    // count_student_pass: count_student_pass.length,
-    // count_student_loss: count_student_loss.length,
-    // count_session: count_session.length,
-    // count_session_pass: count_session_pass.length,
-    // count_session_loss: count_session_loss.length,
+    student_pass,
+    student_fail,
+    displayList: "fail"
   });
 });
 
@@ -563,73 +556,145 @@ for (const [studentId, dateMap] of studentMap.entries()) {
   }
 }
 
-  const teacherMap = new Map();
+  // const teacherMap = new Map();
 
-  // Group sessions by teacher and date
-  sessions.forEach((session) => {
-    const teacher = session.HoTenGiaoVien;
-    const date = moment(session.NgayDaoTao, "DD/MM/YY").format("DD/MM/YY");
-    const startDateTime = moment(session.NgayDaoTao, "DD/MM/YY HH:mm");
-    const endDateTime = startDateTime.clone().add(parseDuration(session.ThoiGian), 'minutes');
+  // // Group sessions by teacher and date
+  // sessions.forEach((session) => {
+  //   const teacher = session.HoTenGiaoVien;
+  //   const date = moment(session.NgayDaoTao, "DD/MM/YY").format("DD/MM/YY");
+  //   const startDateTime = moment(session.NgayDaoTao, "DD/MM/YY HH:mm");
+  //   const endDateTime = startDateTime.clone().add(parseDuration(session.ThoiGian), 'minutes');
 
-    if (!teacherMap.has(teacher)) {
-      teacherMap.set(teacher, new Map());
-    }
+  //   if (!teacherMap.has(teacher)) {
+  //     teacherMap.set(teacher, new Map());
+  //   }
 
-    const dateMap = teacherMap.get(teacher);
+  //   const dateMap = teacherMap.get(teacher);
 
-    if (!dateMap.has(date)) {
-      dateMap.set(date, []);
-    }
+  //   if (!dateMap.has(date)) {
+  //     dateMap.set(date, []);
+  //   }
 
-    dateMap.get(date).push({
-      startDateTime,
-      endDateTime,
-      bienSoXe: session.XeTapLai,
-      session,
-    });
+  //   dateMap.get(date).push({
+  //     startDateTime,
+  //     endDateTime,
+  //     bienSoXe: session.XeTapLai,
+  //     session,
+  //   });
+  // });
+
+  // for (const [teacher, dateMap] of teacherMap.entries()) {
+  //   for (const [date, sessions] of dateMap.entries()) {
+  //     for (let i = 0; i < sessions.length; i++) {
+  //       for (let j = i + 1; j < sessions.length; j++) {
+  //         const session1 = sessions[i];
+  //         const session2 = sessions[j];
+
+  //         if (
+  //           session1.bienSoXe !== session2.bienSoXe &&
+  //           isOverlapping(
+  //             session1.startDateTime,
+  //             session1.endDateTime,
+  //             session2.startDateTime,
+  //             session2.endDateTime
+  //           )
+  //         ) {
+  //           const reason = "Giáo viên có phiên trùng lặp";
+
+  //           if (!session1.session.TrangThai) {
+  //             session1.session.TrangThai = true;
+  //             session1.session.LyDoLoai = reason;
+  //             updates.push(session1.session);
+  //           } else if (!session1.session.LyDoLoai.includes(reason)) {
+  //             session1.session.LyDoLoai += `, ${reason}`;
+  //             updates.push(session1.session);
+  //           }
+
+  //           if (!session2.session.TrangThai) {
+  //             session2.session.TrangThai = true;
+  //             session2.session.LyDoLoai = reason;
+  //             updates.push(session2.session);
+  //           } else if (!session2.session.LyDoLoai.includes(reason)) {
+  //             session2.session.LyDoLoai += `, ${reason}`;
+  //             updates.push(session2.session);
+  //           }
+  //         }
+  //       }
+  //     }
+  //   }
+  // }
+
+const teacherMap = new Map();
+
+// Group sessions by teacher and date
+sessions.forEach((session) => {
+  const teacher = session.HoTenGiaoVien;
+  const date = moment(session.NgayDaoTao, "DD/MM/YY").format("DD/MM/YY");
+  const startDateTime = moment(session.NgayDaoTao, "DD/MM/YY HH:mm");
+  const endDateTime = startDateTime.clone().add(parseDuration(session.ThoiGian), 'minutes');
+
+  if (!teacherMap.has(teacher)) {
+    teacherMap.set(teacher, new Map());
+  }
+
+  const dateMap = teacherMap.get(teacher);
+
+  if (!dateMap.has(date)) {
+    dateMap.set(date, []);
+  }
+
+  dateMap.get(date).push({
+    startDateTime,
+    endDateTime,
+    bienSoXe: session.XeTapLai,
+    session,
   });
+});
 
-  for (const [teacher, dateMap] of teacherMap.entries()) {
-    for (const [date, sessions] of dateMap.entries()) {
-      for (let i = 0; i < sessions.length; i++) {
-        for (let j = i + 1; j < sessions.length; j++) {
-          const session1 = sessions[i];
-          const session2 = sessions[j];
+for (const [teacher, dateMap] of teacherMap.entries()) {
+  for (const [date, sessions] of dateMap.entries()) {
+    for (let i = 0; i < sessions.length; i++) {
+      for (let j = i + 1; j < sessions.length; j++) {
+        const session1 = sessions[i];
+        const session2 = sessions[j];
 
-          if (
-            session1.bienSoXe !== session2.bienSoXe &&
-            isOverlapping(
-              session1.startDateTime,
-              session1.endDateTime,
-              session2.startDateTime,
-              session2.endDateTime
-            )
-          ) {
-            const reason = "Giáo viên có phiên trùng lặp";
+        if (
+          session1.bienSoXe !== session2.bienSoXe &&
+          isOverlapping(
+            session1.startDateTime,
+            session1.endDateTime,
+            session2.startDateTime,
+            session2.endDateTime
+          )
+        ) {
+          const student1 = session1.session;
+          const student2 = session2.session;
 
-            if (!session1.session.TrangThai) {
-              session1.session.TrangThai = true;
-              session1.session.LyDoLoai = reason;
-              updates.push(session1.session);
-            } else if (!session1.session.LyDoLoai.includes(reason)) {
-              session1.session.LyDoLoai += `, ${reason}`;
-              updates.push(session1.session);
-            }
+          const reason1 = `Giáo viên có phiên trùng lặp với học viên ${student2.HoTen} (Mã: ${student2.MaHocVien}, Khóa: ${student2.KhoaHoc})`;
+          const reason2 = `Giáo viên có phiên trùng lặp với học viên ${student1.HoTen} (Mã: ${student1.MaHocVien}, Khóa: ${student1.KhoaHoc})`;
 
-            if (!session2.session.TrangThai) {
-              session2.session.TrangThai = true;
-              session2.session.LyDoLoai = reason;
-              updates.push(session2.session);
-            } else if (!session2.session.LyDoLoai.includes(reason)) {
-              session2.session.LyDoLoai += `, ${reason}`;
-              updates.push(session2.session);
-            }
+          if (!student1.TrangThai) {
+            student1.TrangThai = true;
+            student1.LyDoLoai = reason1;
+            updates.push(student1);
+          } else if (!student1.LyDoLoai.includes(reason1)) {
+            student1.LyDoLoai += `, ${reason1}`;
+            updates.push(student1);
+          }
+
+          if (!student2.TrangThai) {
+            student2.TrangThai = true;
+            student2.LyDoLoai = reason2;
+            updates.push(student2);
+          } else if (!student2.LyDoLoai.includes(reason2)) {
+            student2.LyDoLoai += `, ${reason2}`;
+            updates.push(student2);
           }
         }
       }
     }
   }
+}
 
   // Lưu vào cơ sở dữ liệu
   try {
@@ -733,6 +798,7 @@ router.get("/computeData", async (req, res) => {
           totalDuration: 0,
           totalDistance: 0,
           sessions: [],
+          KhoaHoc: new Set(), 
         });
       }
 
@@ -752,6 +818,7 @@ router.get("/computeData", async (req, res) => {
         col.TotalMorningDistance + col.TotalEveningDistance;
 
       studentData.sessions.push(col);
+      studentData.KhoaHoc.add(col.KhoaHoc); 
     });
 
     const updatedStudents = [];
@@ -813,7 +880,7 @@ router.get("/computeData", async (req, res) => {
         studentStatus = reasons.length > 0;
       }
 
-      if (data.totalMorningDistance < 100 && data.totalMorningTime < 180) {
+      if (data.totalMorningDistance < 5 && data.totalMorningTime < 30) {
         reasons.push("Chưa đủ điều kiện đi tối");
         studentStatus = true;
       }
@@ -821,6 +888,7 @@ router.get("/computeData", async (req, res) => {
       updatedStudents.push({
         MaHocVien: studentId,
         Anh: student ? student.Anh : "",
+        KhoaHoc: Array.from(data.KhoaHoc).join(", "),
         HoTen: student ? student.HoTen : "",
         NgaySinh: student ? student.NgaySinh : "",
         GioiTinh: student ? student.GioiTinh : "",

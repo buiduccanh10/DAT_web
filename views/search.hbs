@@ -7,18 +7,15 @@
     <style>
         /* CSS cho đẹp */
     </style>
+    <script>
+        function toggleList() {
+            const selectedValue = document.getElementById('trangthai').value;
+            document.getElementById('student_fail').style.display = selectedValue === 'fail' ? 'block' : 'none';
+            document.getElementById('student_pass').style.display = selectedValue === 'pass' ? 'block' : 'none';
+        }
+    </script>
 </head>
 <body>
-    {{#if count_student}}
-    <p>Tổng số học viên: {{count_student}}</p>
-    <p>Số học viên đã qua: {{count_student_pass}}</p>
-    <p>Số học viên không qua: {{count_student_loss}}</p>
-
-    <!-- Hiển thị tổng số phiên học -->
-    <p>Tổng số phiên học: {{count_session}}</p>
-    <p>Số phiên học đã qua: {{count_session_pass}}</p>
-    <p>Số phiên học không qua: {{count_session_loss}}</p>
-    {{/if}}
     <h1>Search</h1>
     <form action="/search/results" method="GET">
         <label for="query">Nhập Họ tên, Mã học viên hoặc Số CCCD:</label>
@@ -32,9 +29,10 @@
         <table border="1">
             <thead>
                 <tr>
+                    <th>Mã học viên</th>
                     <th>Ảnh</th>
                     <th>Họ tên</th>
-                    <th>Mã học viên</th>
+                    <th>Khoá học</th>
                     <th>Ngày sinh</th>
                     <th>Giới tính</th>
                     <th>Số CMT</th>
@@ -54,9 +52,10 @@
             <tbody>
                 {{#each results}}
                     <tr>
+                        <td>{{ this.MaHocVien}}</td>
                         <td><img src="data:image/jpeg;base64,{{ this.Anh}}" style="height: 130px; width:100px;" alt="Ảnh"></td>
                         <td>{{this.HoTen}}</td>
-                        <td>{{ this.MaHocVien}}</td>
+                        <td>{{this.KhoaHoc}}</td>
                         <td>{{this.NgaySinh}}</td>
                         <td>{{this.GioiTinh}}</td>
                         <td>{{this.SoCMT}}</td>
@@ -80,7 +79,79 @@
             </tbody>
         </table> 
     {{else}}
-        <p>Không tìm thấy kết quả phù hợp.</p>
+        <label for="trangthai">Chọn danh sách hiển thị:</label>
+    <select id="trangthai" name="trangthai" onchange="toggleList()">
+        <option value="fail" selected>Bảo lưu</option>
+        <option value="pass">Đạt</option>
+    </select>
+
+    <!-- Hiển thị danh sách học viên bảo lưu (mặc định) -->
+    <div id="student_fail" style="display: block;">
+        <h2>Danh sách học viên bảo lưu: {{student_fail.length}}</h2>
+        <table border="1">
+            <thead>
+                <tr>
+                    <th>Mã học viên</th>
+                    <th>Ảnh</th>
+                    <th>Họ tên</th>
+                    <th>Khoá học</th>
+                    <th>Ngày sinh</th>
+                    <th>Giới tính</th>
+                    <th>Số CMT</th>
+                    <th>Trạng thái</th>
+                    <th>Lý do</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{#each student_fail}}
+                    <tr>
+                        <td>{{ this.MaHocVien }}</td>
+                        <td><img src="data:image/jpeg;base64,{{ this.Anh }}" style="height: 130px; width:100px;" alt="Ảnh"></td>
+                        <td>{{ this.HoTen }}</td>
+                        <td>{{ this.KhoaHoc }}</td>
+                        <td>{{ this.NgaySinh }}</td>
+                        <td>{{ this.GioiTinh }}</td>
+                        <td>{{ this.SoCMT }}</td>
+                        <td style="color: red;">Bảo lưu</td>
+                        <td>{{ this.LyDo }}</td>
+                    </tr>
+                {{/each}}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Hiển thị danh sách học viên đã qua -->
+    <div id="student_pass" style="display: none;">
+        <h2>Danh sách học viên đạt: {{student_pass.length}}</h2>
+        <table border="1">
+            <thead>
+                <tr>
+                    <th>Mã học viên</th>
+                    <th>Ảnh</th>
+                    <th>Họ tên</th>
+                    <th>Khoá học</th>
+                    <th>Ngày sinh</th>
+                    <th>Giới tính</th>
+                    <th>Số CMT</th>
+                    <th>Trạng thái</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{#each student_pass}}
+                    <tr>
+                        <td>{{ this.MaHocVien }}</td>
+                        <td><img src="data:image/jpeg;base64,{{ this.Anh }}" style="height: 130px; width:100px;" alt="Ảnh"></td>
+                        <td>{{ this.HoTen }}</td>
+                        <td>{{ this.KhoaHoc }}</td>
+                        <td>{{ this.NgaySinh }}</td>
+                        <td>{{ this.GioiTinh }}</td>
+                        <td>{{ this.SoCMT }}</td>
+                        <td>Đạt</td>
+                    </tr>
+                {{/each}}
+            </tbody>
+        </table>
+    </div>
     {{/if}}
 
     <!-- Nếu có phiên, hiển thị bảng -->
