@@ -98,6 +98,15 @@
                     <th>Ngày sinh</th>
                     <th>Giới tính</th>
                     <th>Số CMT</th>
+                    <th>Hạng</th>
+                    <th>Tổng thời gian B11</th>
+                    <th>Tổng quãng đường B11</th>
+                    <th>Tổng quãng đường sáng</th>
+                    <th>Tổng thời gian sáng</th>
+                    <th>Tổng quãng đường tối</th>
+                    <th>Tổng thời gian tối</th>
+                    <th>Tổng thời gian</th>
+                    <th>Tổng quãng đường</th>
                     <th>Trạng thái</th>
                     <th>Lý do</th>
                 </tr>
@@ -105,15 +114,28 @@
             <tbody>
                 {{#each student_fail}}
                     <tr>
-                        <td>{{ this.MaHocVien }}</td>
-                        <td><img src="data:image/jpeg;base64,{{ this.Anh }}" style="height: 130px; width:100px;" alt="Ảnh"></td>
-                        <td>{{ this.HoTen }}</td>
-                        <td>{{ this.KhoaHoc }}</td>
-                        <td>{{ this.NgaySinh }}</td>
-                        <td>{{ this.GioiTinh }}</td>
-                        <td>{{ this.SoCMT }}</td>
-                        <td style="color: red;">Bảo lưu</td>
-                        <td>{{ this.LyDo }}</td>
+                        <td>{{ this.MaHocVien}}</td>
+                        <td><img src="data:image/jpeg;base64,{{ this.Anh}}" style="height: 130px; width:100px;" alt="Ảnh"></td>
+                        <td>{{this.HoTen}}</td>
+                        <td>{{this.KhoaHoc}}</td>
+                        <td>{{this.NgaySinh}}</td>
+                        <td>{{this.GioiTinh}}</td>
+                        <td>{{this.SoCMT}}</td>
+                        <td>{{this.Category}}</td>
+                        <td>{{this.TongThoiGianXeSoTuDong}}</td>
+                        <td>{{this.TongQuangDuongXeSoTuDong}}</td>
+                        <td>{{this.TotalMorningDistance}}</td>
+                        <td>{{this.TotalMorningTime}}</td>
+                        <td>{{this.TotalEveningDistance}}</td>
+                        <td>{{this.TotalEveningTime}}</td>
+                        <td>{{this.TotalDuration}}</td>
+                        <td>{{this.TotalDistance}}</td>
+                        {{#if this.TrangThai}}
+                            <td style="color: red;">Bảo lưu</td>
+                        {{else}}
+                            <td>Đạt</td>
+                        {{/if}}
+                        <td>{{this.LyDo}}</td>
                     </tr>
                 {{/each}}
             </tbody>
@@ -133,20 +155,42 @@
                     <th>Ngày sinh</th>
                     <th>Giới tính</th>
                     <th>Số CMT</th>
+                    <th>Hạng</th>
+                    <th>Tổng thời gian B11</th>
+                    <th>Tổng quãng đường B11</th>
+                    <th>Tổng quãng đường sáng</th>
+                    <th>Tổng thời gian sáng</th>
+                    <th>Tổng quãng đường tối</th>
+                    <th>Tổng thời gian tối</th>
+                    <th>Tổng thời gian</th>
+                    <th>Tổng quãng đường</th>
                     <th>Trạng thái</th>
                 </tr>
             </thead>
             <tbody>
                 {{#each student_pass}}
                     <tr>
-                        <td>{{ this.MaHocVien }}</td>
-                        <td><img src="data:image/jpeg;base64,{{ this.Anh }}" style="height: 130px; width:100px;" alt="Ảnh"></td>
-                        <td>{{ this.HoTen }}</td>
-                        <td>{{ this.KhoaHoc }}</td>
-                        <td>{{ this.NgaySinh }}</td>
-                        <td>{{ this.GioiTinh }}</td>
-                        <td>{{ this.SoCMT }}</td>
-                        <td>Đạt</td>
+                        <td>{{ this.MaHocVien}}</td>
+                        <td><img src="data:image/jpeg;base64,{{ this.Anh}}" style="height: 130px; width:100px;" alt="Ảnh"></td>
+                        <td>{{this.HoTen}}</td>
+                        <td>{{this.KhoaHoc}}</td>
+                        <td>{{this.NgaySinh}}</td>
+                        <td>{{this.GioiTinh}}</td>
+                        <td>{{this.SoCMT}}</td>
+                        <td>{{this.Category}}</td>
+                        <td>{{this.TongThoiGianXeSoTuDong}}</td>
+                        <td>{{this.TongQuangDuongXeSoTuDong}}</td>
+                        <td>{{this.TotalMorningDistance}}</td>
+                        <td>{{this.TotalMorningTime}}</td>
+                        <td>{{this.TotalEveningDistance}}</td>
+                        <td>{{this.TotalEveningTime}}</td>
+                        <td>{{this.TotalDuration}}</td>
+                        <td>{{this.TotalDistance}}</td>
+                        {{#if this.TrangThai}}
+                            <td style="color: red;">Bảo lưu</td>
+                        {{else}}
+                            <td>Đạt</td>
+                        {{/if}}
                     </tr>
                 {{/each}}
             </tbody>

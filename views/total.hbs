@@ -4,10 +4,74 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+    <script>
+    function exportToExcel() {
+        const table = document.getElementById("dataTable");
+        const rows = Array.from(table.rows);
+
+        // Group and organize data
+        const dataByKhoaHoc = {};
+        rows.slice(1).forEach(row => {
+            const khoaHoc = row.cells[2].innerText;
+            if (!dataByKhoaHoc[khoaHoc]) {
+                dataByKhoaHoc[khoaHoc] = [];
+            }
+
+            const fullName = row.cells[3].innerText;
+            const parts = fullName.split(" ");
+            // Assuming last name is the last part of the name
+            const firstName = parts.pop();
+            const lastName = parts.join(" ");
+
+            dataByKhoaHoc[khoaHoc].push({
+                "Mã học viên": row.cells[1].innerText,
+                "Họ tên": fullName,
+                "Ngày sinh": row.cells[4].innerText,
+                "Giới tính": row.cells[5].innerText,
+                "Số CCCD": row.cells[6].innerText,
+                "Hạng lái xe": row.cells[7].innerText,
+                "Tổng thời gian": row.cells[14].innerText,
+                "Tổng quãng đường(km)": row.cells[15].innerText,
+                "Kết quả": row.cells[16].innerText === "Bảo lưu" ? "Không đạt" : "Đạt",
+            });
+        });
+
+        // Sort each group by "Họ tên"
+        for (const khoaHoc in dataByKhoaHoc) {
+            dataByKhoaHoc[khoaHoc].sort((a, b) => {
+                const partsA = a["Họ tên"].split(" ");
+                const partsB = b["Họ tên"].split(" ");
+                const firstNameA = partsA.pop();
+                const firstNameB = partsB.pop();
+                return firstNameA.localeCompare(firstNameB);
+            });
+        }
+
+        // Prepare formatted data for export
+        let exportData = [];
+        for (const [khoaHoc, data] of Object.entries(dataByKhoaHoc)) {
+            exportData.push([khoaHoc]); // Add header for each group
+            exportData = exportData.concat(data); // Add sorted grouped data
+        }
+
+        // Convert data to worksheet and book
+        const worksheet = XLSX.utils.json_to_sheet(exportData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
+
+        // Prompt user to provide filename and path for download
+        const filename = prompt("Đặt tên tệp:", "example.xlsx");
+        if (filename) {
+            XLSX.writeFile(workbook, filename);
+        }
+    }
+</script>
+
 </head>
 <body>
     {{#if total}}
-    <button class="w3-btn w3-green w3-border w3-border-green w3-round">Xuất Excel</button>
+    <button class="w3-btn w3-green w3-border w3-border-green w3-round" onclick="exportToExcel()">Xuất Excel</button>
 
     <div id="pagination">
         <button onclick="previousPage()" id="prevBtn" disabled>Previous</button>
