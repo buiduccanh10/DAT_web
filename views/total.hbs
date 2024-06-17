@@ -100,6 +100,7 @@
             <th>Tổng quãng đường</th>
             <th>Trạng thái</th>
             <th>Lý do</th>
+            <th hidden >Biển số xe</th>
         </tr>
         {{#each total}}
             <tr>
@@ -125,6 +126,7 @@
                     <td>Đạt</td>
                 {{/if}}
                 <td>{{ this.LyDo}}</td>
+                <td hidden >{{ this.XeTapLai}}</td>
             </tr>
         {{/each}}
     </table>
@@ -161,6 +163,7 @@ async function exportToExcel() {
                     "Tổng thời gian": row.cells[14].innerText,
                     "Tổng quãng đường(km)": row.cells[15].innerText,
                     "Kết quả": row.cells[16].innerText === "Bảo lưu" ? "Không đạt" : "Đạt",
+                    "Biển số xe": row.cells[18].innerText,
                 });
             });
 

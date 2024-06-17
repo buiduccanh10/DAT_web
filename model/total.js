@@ -18,7 +18,8 @@ const totalSchema = new mongoose.Schema({
   TotalDistance: Number,
   Category: String,
   TrangThai: Boolean,
-  LyDo:String
+  LyDo:String,
+  XeTapLai: String
 });
 
 const Total = mongoose.model("Total", totalSchema, "total");

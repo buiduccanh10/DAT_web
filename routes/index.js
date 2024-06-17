@@ -12,188 +12,6 @@ const Total = require("../model/total");
 const Car = require("../model/car");
 const excel = require('node-excel-export');
 
-router.post('/export-to-excel', (req, res) => {
-  const dataByKhoaHoc = req.body.dataByKhoaHoc;
-
-  // Define styles
-  const styles = {
-      headerDark: {
-        fill: {
-          fgColor: {
-              rgb: '808080'
-          }
-      },
-        font: {
-          name: 'Times New Roman',
-          sz: 16,
-          bold:true
-      },
-      alignment: {
-        vertical: 'middle',
-        horizontal: 'center'
-      }
-      },
-      cellGreen: {
-          fill: {
-              fgColor: {
-                  rgb: '99cc00'
-              }
-          },
-          font: {
-            name: 'Times New Roman',
-            color: {
-                rgb: 'cc3300'
-            },
-            sz: 18,
-        },
-        alignment: {
-          vertical: 'middle',
-          horizontal: 'center'
-        }
-      },
-      cellNormal: {
-        font: {
-          name: 'Times New Roman',
-          sz: 12,
-        },
-        alignment: {
-          vertical: 'middle',
-          horizontal: 'center',
-        },
-      },
-      cellNameStudent: {
-        font: {
-          name: 'Times New Roman',
-          sz: 12,
-        },
-      },
-  };
-
-  // Define specification
-  const specification = {
-      maHocVien: {
-          displayName: 'Mã học viên',
-          headerStyle: styles.headerDark,
-          width: 200,
-          cellStyle: function(value, row) {
-              return row.isHeader ? styles.cellGreen : styles.cellNormal;
-          }
-      },
-      hoTen: {
-          displayName: 'Họ tên',
-          headerStyle: styles.headerDark,
-          width: 220,
-          cellStyle: function(value, row) {
-              return row.isHeader ? styles.cellGreen : styles.cellNameStudent;
-          }
-      },
-      ngaySinh: {
-          displayName: 'Ngày sinh',
-          headerStyle: styles.headerDark,
-          width: 120,
-          cellStyle: function(value, row) {
-              return row.isHeader ? styles.cellGreen : styles.cellNormal;
-          }
-      },
-      gioiTinh: {
-          displayName: 'Giới tính',
-          headerStyle: styles.headerDark,
-          width: 80,
-          cellStyle: function(value, row) {
-              return row.isHeader ? styles.cellGreen : styles.cellNormal;
-          }
-      },
-      soCCCD: {
-          displayName: 'Số CCCD',
-          headerStyle: styles.headerDark,
-          width: 250,
-          cellStyle: function(value, row) {
-              return row.isHeader ? styles.cellGreen : styles.cellNormal;
-          }
-      },
-      hangLaiXe: {
-          displayName: 'Hạng lái xe',
-          headerStyle: styles.headerDark,
-          width: 100,
-          cellStyle: function(value, row) {
-              return row.isHeader ? styles.cellGreen : styles.cellNormal;
-          }
-      },
-      tongThoiGian: {
-          displayName: 'Tổng thời gian',
-          headerStyle: styles.headerDark,
-          width: 140,
-          cellStyle: function(value, row) {
-              return row.isHeader ? styles.cellGreen : styles.cellNormal;
-          }
-      },
-      tongQuangDuong: {
-          displayName: 'Tổng quãng đường(km)',
-          headerStyle: styles.headerDark,
-          width: 190,
-          cellStyle: function(value, row) {
-              return row.isHeader ? styles.cellGreen : styles.cellNormal;
-          }
-      },
-      ketQua: {
-          displayName: 'Kết quả',
-          headerStyle: styles.headerDark,
-          width: 100,
-          cellStyle: function(value, row) {
-              return row.isHeader ? styles.cellGreen : styles.cellNormal;
-          }
-      }
-  };
-
-  // Prepare data set
-  let dataset = [];
-  for (const [khoaHoc, data] of Object.entries(dataByKhoaHoc)) {
-    // Add header row with green background for all columns
-    dataset.push({
-        maHocVien: '', 
-        hoTen: '', 
-        ngaySinh: '', 
-        gioiTinh: '', 
-        soCCCD: 'CHÍNH KHOÁ ' + khoaHoc, 
-        hangLaiXe: '', 
-        tongThoiGian: '', 
-        tongQuangDuong: '', 
-        ketQua: '',
-        isHeader: true // Mark this row as a header
-    });
-
-    // Add data rows
-    dataset = dataset.concat(data.map(item => ({
-        maHocVien: item["Mã học viên"],
-        hoTen: item["Họ tên"],
-        ngaySinh: item["Ngày sinh"],
-        gioiTinh: item["Giới tính"],
-        soCCCD: item["Số CCCD"],
-        hangLaiXe: item["Hạng lái xe"],
-        tongThoiGian: item["Tổng thời gian"],
-        tongQuangDuong: item["Tổng quãng đường(km)"],
-        ketQua: item["Kết quả"],
-        isHeader: false // Mark this row as not a header
-    })));
-  }
-
-  // Create the excel report
-  const report = excel.buildExport(
-      [
-          {
-              name: 'Sheet1',
-              specification: specification,
-              data: dataset
-          }
-      ]
-  );
-
-  // Set filename and send the file to client
-  const filename = req.body.filename || 'example.xlsx';
-  res.attachment(filename);
-  res.send(report);
-});
-
 /* GET home page. */
 router.get("/", function (req, res, next) {
   res.render("index", { layout: "layout" });
@@ -982,6 +800,7 @@ router.get("/computeData", async (req, res) => {
           totalDistance: 0,
           sessions: [],
           KhoaHoc: new Set(), 
+          XeTapLai: new Set(),
         });
       }
 
@@ -1002,6 +821,7 @@ router.get("/computeData", async (req, res) => {
 
       studentData.sessions.push(col);
       studentData.KhoaHoc.add(col.KhoaHoc); 
+      studentData.XeTapLai.add(col.XeTapLai);
     });
 
     const updatedStudents = [];
@@ -1087,6 +907,7 @@ router.get("/computeData", async (req, res) => {
         Category: category,
         TrangThai: studentStatus,
         LyDo: reasons.join(", "),
+        XeTapLai: Array.from(data.XeTapLai).join(", "), 
       });
     }
 
@@ -1097,6 +918,198 @@ router.get("/computeData", async (req, res) => {
     console.error("Error computing data:", err);
     res.status(500).send("Internal Server Error");
   }
+});
+
+router.post('/export-to-excel', (req, res) => {
+  const dataByKhoaHoc = req.body.dataByKhoaHoc;
+
+  // Define styles
+  const styles = {
+      headerDark: {
+        fill: {
+          fgColor: {
+              rgb: '808080'
+          }
+      },
+        font: {
+          name: 'Times New Roman',
+          sz: 16,
+          bold:true
+      },
+      alignment: {
+        vertical: 'middle',
+        horizontal: 'center'
+      }
+      },
+      cellGreen: {
+          fill: {
+              fgColor: {
+                  rgb: '99cc00'
+              }
+          },
+          font: {
+            name: 'Times New Roman',
+            color: {
+                rgb: 'cc3300'
+            },
+            sz: 18,
+        },
+        alignment: {
+          vertical: 'middle',
+          horizontal: 'center'
+        }
+      },
+      cellNormal: {
+        font: {
+          name: 'Times New Roman',
+          sz: 12,
+        },
+        alignment: {
+          vertical: 'middle',
+          horizontal: 'center',
+        },
+      },
+      cellNameStudent: {
+        font: {
+          name: 'Times New Roman',
+          sz: 12,
+        },
+      },
+  };
+
+  // Define specification
+  const specification = {
+      maHocVien: {
+          displayName: 'Mã học viên',
+          headerStyle: styles.headerDark,
+          width: 200,
+          cellStyle: function(value, row) {
+              return row.isHeader ? styles.cellGreen : styles.cellNormal;
+          }
+      },
+      hoTen: {
+          displayName: 'Họ tên',
+          headerStyle: styles.headerDark,
+          width: 220,
+          cellStyle: function(value, row) {
+              return row.isHeader ? styles.cellGreen : styles.cellNameStudent;
+          }
+      },
+      ngaySinh: {
+          displayName: 'Ngày sinh',
+          headerStyle: styles.headerDark,
+          width: 120,
+          cellStyle: function(value, row) {
+              return row.isHeader ? styles.cellGreen : styles.cellNormal;
+          }
+      },
+      gioiTinh: {
+          displayName: 'Giới tính',
+          headerStyle: styles.headerDark,
+          width: 80,
+          cellStyle: function(value, row) {
+              return row.isHeader ? styles.cellGreen : styles.cellNormal;
+          }
+      },
+      soCCCD: {
+          displayName: 'Số CCCD',
+          headerStyle: styles.headerDark,
+          width: 250,
+          cellStyle: function(value, row) {
+              return row.isHeader ? styles.cellGreen : styles.cellNormal;
+          }
+      },
+      hangLaiXe: {
+          displayName: 'Hạng lái xe',
+          headerStyle: styles.headerDark,
+          width: 100,
+          cellStyle: function(value, row) {
+              return row.isHeader ? styles.cellGreen : styles.cellNormal;
+          }
+      },
+      tongThoiGian: {
+          displayName: 'Tổng thời gian',
+          headerStyle: styles.headerDark,
+          width: 140,
+          cellStyle: function(value, row) {
+              return row.isHeader ? styles.cellGreen : styles.cellNormal;
+          }
+      },
+      tongQuangDuong: {
+          displayName: 'Tổng quãng đường(km)',
+          headerStyle: styles.headerDark,
+          width: 190,
+          cellStyle: function(value, row) {
+              return row.isHeader ? styles.cellGreen : styles.cellNormal;
+          }
+      },
+      bienSoXe: {
+        displayName: 'Biển số xe',
+        headerStyle: styles.headerDark,
+        width: 150,
+        cellStyle: function(value, row) {
+            return row.isHeader ? styles.cellGreen : styles.cellNormal;
+        }
+    },
+      ketQua: {
+          displayName: 'Kết quả',
+          headerStyle: styles.headerDark,
+          width: 100,
+          cellStyle: function(value, row) {
+              return row.isHeader ? styles.cellGreen : styles.cellNormal;
+          }
+      }
+  };
+
+  // Prepare data set
+  let dataset = [];
+  for (const [khoaHoc, data] of Object.entries(dataByKhoaHoc)) {
+    // Add header row with green background for all columns
+    dataset.push({
+        maHocVien: '', 
+        hoTen: '', 
+        ngaySinh: '', 
+        gioiTinh: '', 
+        soCCCD: 'CHÍNH KHOÁ ' + khoaHoc, 
+        hangLaiXe: '', 
+        tongThoiGian: '', 
+        tongQuangDuong: '', 
+        bienSoXe:'',
+        ketQua: '',
+        isHeader: true // Mark this row as a header
+    });
+
+    // Add data rows
+    dataset = dataset.concat(data.map(item => ({
+        maHocVien: item["Mã học viên"],
+        hoTen: item["Họ tên"],
+        ngaySinh: item["Ngày sinh"],
+        gioiTinh: item["Giới tính"],
+        soCCCD: item["Số CCCD"],
+        hangLaiXe: item["Hạng lái xe"],
+        tongThoiGian: item["Tổng thời gian"],
+        tongQuangDuong: item["Tổng quãng đường(km)"],
+        bienSoXe: item["Biển số xe"],
+        ketQua: item["Kết quả"],
+        isHeader: false // Mark this row as not a header
+    })));
+  }
+
+  // Create the excel report
+  const report = excel.buildExport(
+      [
+          {
+              name: 'Sheet1',
+              specification: specification,
+              data: dataset
+          }
+      ]
+  );
+
+  // Set filename and send the file to client
+  const filename = req.body.filename || 'example.xlsx';
+  res.attachment(filename);
+  res.send(report);
 });
 
 router.get("/search/results", async (req, res) => {
