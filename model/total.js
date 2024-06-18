@@ -19,7 +19,9 @@ const totalSchema = new mongoose.Schema({
   Category: String,
   TrangThai: Boolean,
   LyDo:String,
-  XeTapLai: String
+  B1: String,
+  B2: String,
+  C: String
 });
 
 const Total = mongoose.model("Total", totalSchema, "total");

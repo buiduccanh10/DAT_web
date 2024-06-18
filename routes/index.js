@@ -10,7 +10,7 @@ const Student = require("../model/student");
 const Dat_session = require("../model/dat_session");
 const Total = require("../model/total");
 const Car = require("../model/car");
-const excel = require('node-excel-export');
+const excel = require('excel4node');
 
 /* GET home page. */
 router.get("/", function (req, res, next) {
@@ -801,6 +801,9 @@ router.get("/computeData", async (req, res) => {
           sessions: [],
           KhoaHoc: new Set(), 
           XeTapLai: new Set(),
+          B1: new Set(),
+          B2: new Set(),
+          C: new Set(),
         });
       }
 
@@ -888,6 +891,21 @@ router.get("/computeData", async (req, res) => {
         studentStatus = true;
       }
 
+      let xeTapLaiList = Array.from(data.XeTapLai);
+
+      for (let bienSoXe of xeTapLaiList) {
+        const car = await Car.findOne({ BienSoXe: bienSoXe });
+        if (car) {
+          if (car.LoaiHangXe === 'B11') {
+            data.B1.add(bienSoXe);
+          } else if (car.LoaiHangXe === 'B2') {
+            data.B2.add(bienSoXe);
+          } else if (car.LoaiHangXe === 'C') {
+            data.C.add(bienSoXe);
+          }
+        }
+      }
+
       updatedStudents.push({
         MaHocVien: studentId,
         Anh: student ? student.Anh : "",
@@ -907,7 +925,9 @@ router.get("/computeData", async (req, res) => {
         Category: category,
         TrangThai: studentStatus,
         LyDo: reasons.join(", "),
-        XeTapLai: Array.from(data.XeTapLai).join(", "), 
+        B1: Array.from(data.B1).join(", "),
+        B2: Array.from(data.B2).join(", "),
+        C: Array.from(data.C).join(", "),
       });
     }
 
@@ -923,193 +943,148 @@ router.get("/computeData", async (req, res) => {
 router.post('/export-to-excel', (req, res) => {
   const dataByKhoaHoc = req.body.dataByKhoaHoc;
 
+  const wb = new excel.Workbook();
+  const ws = wb.addWorksheet('Sheet1');
+
   // Define styles
-  const styles = {
-      headerDark: {
-        fill: {
-          fgColor: {
-              rgb: '808080'
-          }
-      },
-        font: {
-          name: 'Times New Roman',
-          sz: 16,
-          bold:true
-      },
-      alignment: {
-        vertical: 'middle',
-        horizontal: 'center'
-      }
-      },
-      cellGreen: {
-          fill: {
-              fgColor: {
-                  rgb: '99cc00'
-              }
-          },
-          font: {
-            name: 'Times New Roman',
-            color: {
-                rgb: 'cc3300'
-            },
-            sz: 18,
-        },
-        alignment: {
-          vertical: 'middle',
-          horizontal: 'center'
-        }
-      },
-      cellNormal: {
-        font: {
-          name: 'Times New Roman',
-          sz: 12,
-        },
-        alignment: {
-          vertical: 'middle',
-          horizontal: 'center',
-        },
-      },
-      cellNameStudent: {
-        font: {
-          name: 'Times New Roman',
-          sz: 12,
-        },
-      },
-  };
-
-  // Define specification
-  const specification = {
-      maHocVien: {
-          displayName: 'Mã học viên',
-          headerStyle: styles.headerDark,
-          width: 200,
-          cellStyle: function(value, row) {
-              return row.isHeader ? styles.cellGreen : styles.cellNormal;
-          }
-      },
-      hoTen: {
-          displayName: 'Họ tên',
-          headerStyle: styles.headerDark,
-          width: 220,
-          cellStyle: function(value, row) {
-              return row.isHeader ? styles.cellGreen : styles.cellNameStudent;
-          }
-      },
-      ngaySinh: {
-          displayName: 'Ngày sinh',
-          headerStyle: styles.headerDark,
-          width: 120,
-          cellStyle: function(value, row) {
-              return row.isHeader ? styles.cellGreen : styles.cellNormal;
-          }
-      },
-      gioiTinh: {
-          displayName: 'Giới tính',
-          headerStyle: styles.headerDark,
-          width: 80,
-          cellStyle: function(value, row) {
-              return row.isHeader ? styles.cellGreen : styles.cellNormal;
-          }
-      },
-      soCCCD: {
-          displayName: 'Số CCCD',
-          headerStyle: styles.headerDark,
-          width: 250,
-          cellStyle: function(value, row) {
-              return row.isHeader ? styles.cellGreen : styles.cellNormal;
-          }
-      },
-      hangLaiXe: {
-          displayName: 'Hạng lái xe',
-          headerStyle: styles.headerDark,
-          width: 100,
-          cellStyle: function(value, row) {
-              return row.isHeader ? styles.cellGreen : styles.cellNormal;
-          }
-      },
-      tongThoiGian: {
-          displayName: 'Tổng thời gian',
-          headerStyle: styles.headerDark,
-          width: 140,
-          cellStyle: function(value, row) {
-              return row.isHeader ? styles.cellGreen : styles.cellNormal;
-          }
-      },
-      tongQuangDuong: {
-          displayName: 'Tổng quãng đường(km)',
-          headerStyle: styles.headerDark,
-          width: 190,
-          cellStyle: function(value, row) {
-              return row.isHeader ? styles.cellGreen : styles.cellNormal;
-          }
-      },
-      bienSoXe: {
-        displayName: 'Biển số xe',
-        headerStyle: styles.headerDark,
-        width: 150,
-        cellStyle: function(value, row) {
-            return row.isHeader ? styles.cellGreen : styles.cellNormal;
-        }
+  const headerStyle = wb.createStyle({
+    font: {
+      name: 'Times New Roman',
+      bold: true,
+      size: 16,
     },
-      ketQua: {
-          displayName: 'Kết quả',
-          headerStyle: styles.headerDark,
-          width: 100,
-          cellStyle: function(value, row) {
-              return row.isHeader ? styles.cellGreen : styles.cellNormal;
-          }
-      }
+    alignment: {
+      vertical: 'center',
+      horizontal: 'center',
+    },
+    fill: {
+      type: 'pattern',
+      patternType: 'solid',
+      fgColor: '808080',
+    },
+  });
+
+  const titleStyle = wb.createStyle({
+    font: {
+      name: 'Times New Roman',
+      bold: true,
+      size: 16,
+    },
+    alignment: {
+      vertical: 'center',
+      horizontal: 'center',
+    },
+  });
+
+  const cellGreenStyle = wb.createStyle({
+    font: {
+      name: 'Times New Roman',
+      size: 18,
+      color: 'cc3300',
+    },
+    alignment: {
+      vertical: 'center',
+      horizontal: 'center',
+    },
+    fill: {
+      type: 'pattern',
+      patternType: 'solid',
+      fgColor: '99cc00',
+    },
+  });
+
+  const cellNormalStyle = wb.createStyle({
+    font: {
+      name: 'Times New Roman',
+      size: 12,
+    },
+    alignment: {
+      vertical: 'center',
+      horizontal: 'center',
+    },
+  });
+
+  const cellNameStudentStyle = wb.createStyle({
+    font: {
+      name: 'Times New Roman',
+      size: 12,
+    },
+  });
+
+  // Merge cells for the report title
+  ws.cell(1, 1, 1, 5, true).string('SỞ LĐTB&XH HẢI DƯƠNG').style(cellNormalStyle);
+  ws.cell(2, 1, 2, 5, true).string('TRUNG TÂM GDNN &SHLX  THANH MIỆN').style(cellNormalStyle);
+  ws.cell(1, 7, 1, 18, true).string('CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM').style(cellNormalStyle);
+  ws.cell(2, 7, 2, 18, true).string('Độc lập - Tự do - Hạnh phúc').style(cellNormalStyle);
+  ws.cell(4, 1, 4, 18, true).string('BÁO CÁO KẾT QUẢ ĐÀO TẠO THỰC HÀNH LÁI XE TRÊN ĐƯỜNG GIAO THÔNG THEO DANH SÁCH THÍ SINH DỰ TỐT NGHIỆP').style(titleStyle);
+
+  // Define headers with their respective widths
+  const headers = [
+    { header: 'Mã học viên', width: 30 },
+    { header: 'Họ tên', width: 30 },
+    { header: 'Ngày sinh', width: 15 },
+    { header: 'Giới tính', width: 10 },
+    { header: 'Số CCCD', width: 25 },
+    { header: 'Hạng lái xe', width: 15 },
+    { header: 'Tổng thời gian', width: 20 },
+    { header: 'Tổng quãng đường(km)', width: 35 },
+    { header: '', width: 20 },
+    { header: 'Biển số xe', width: 20 },
+    { header: '', width: 20 },
+    { header: 'Kết quả', width: 10 },
+  ];
+
+  // Set header row
+  headers.forEach((header, index) => {
+    ws.cell(6, index + 1).string(header.header).style(headerStyle);
+    ws.column(index + 1).setWidth(header.width);
+  });
+
+  ws.cell(7, 9).string("B1").style(headerStyle);
+  ws.cell(7, 10).string("B2").style(headerStyle);
+  ws.cell(7, 11).string("C").style(headerStyle);
+
+  // Function to determine the sorting order
+  const getSortOrder = (khoaHoc) => {
+    if (khoaHoc.includes('B1')) return 1;
+    if (khoaHoc.includes('B2')) return 2;
+    if (khoaHoc.includes('C')) return 3;
+    return 4; // fallback for any other categories
   };
 
-  // Prepare data set
-  let dataset = [];
-  for (const [khoaHoc, data] of Object.entries(dataByKhoaHoc)) {
+  // Sort the keys based on the desired order
+  const sortedKeys = Object.keys(dataByKhoaHoc).sort((a, b) => getSortOrder(a) - getSortOrder(b));
+
+  let rowIndex = 8;
+  sortedKeys.forEach(khoaHoc => {
+    const data = dataByKhoaHoc[khoaHoc];
+
     // Add header row with green background for all columns
-    dataset.push({
-        maHocVien: '', 
-        hoTen: '', 
-        ngaySinh: '', 
-        gioiTinh: '', 
-        soCCCD: 'CHÍNH KHOÁ ' + khoaHoc, 
-        hangLaiXe: '', 
-        tongThoiGian: '', 
-        tongQuangDuong: '', 
-        bienSoXe:'',
-        ketQua: '',
-        isHeader: true // Mark this row as a header
-    });
+    ws.cell(rowIndex, 1, rowIndex, headers.length, true)
+      .string(`CHÍNH KHOÁ ${khoaHoc}`)
+      .style(cellGreenStyle);
+    rowIndex++;
 
     // Add data rows
-    dataset = dataset.concat(data.map(item => ({
-        maHocVien: item["Mã học viên"],
-        hoTen: item["Họ tên"],
-        ngaySinh: item["Ngày sinh"],
-        gioiTinh: item["Giới tính"],
-        soCCCD: item["Số CCCD"],
-        hangLaiXe: item["Hạng lái xe"],
-        tongThoiGian: item["Tổng thời gian"],
-        tongQuangDuong: item["Tổng quãng đường(km)"],
-        bienSoXe: item["Biển số xe"],
-        ketQua: item["Kết quả"],
-        isHeader: false // Mark this row as not a header
-    })));
-  }
+    data.forEach(item => {
+      ws.cell(rowIndex, 1).string(item["Mã học viên"]).style(cellNormalStyle);
+      ws.cell(rowIndex, 2).string(item["Họ tên"]).style(cellNameStudentStyle);
+      ws.cell(rowIndex, 3).string(item["Ngày sinh"]).style(cellNormalStyle);
+      ws.cell(rowIndex, 4).string(item["Giới tính"]).style(cellNormalStyle);
+      ws.cell(rowIndex, 5).string(item["Số CCCD"]).style(cellNormalStyle);
+      ws.cell(rowIndex, 6).string(item["Hạng lái xe"]).style(cellNormalStyle);
+      ws.cell(rowIndex, 7).string(item["Tổng thời gian"]).style(cellNormalStyle);
+      ws.cell(rowIndex, 8).string(item["Tổng quãng đường(km)"]).style(cellNormalStyle);
+      ws.cell(rowIndex, 9).string(item["B1"]).style(cellNormalStyle);
+      ws.cell(rowIndex+1, 10).string(item["B2"]).style(cellNormalStyle);
+      ws.cell(rowIndex+1, 11).string(item["C"]).style(cellNormalStyle);
+      ws.cell(rowIndex, 12).string(item["Kết quả"]).style(cellNormalStyle);
+      rowIndex++;
+    });
+  });
 
-  // Create the excel report
-  const report = excel.buildExport(
-      [
-          {
-              name: 'Sheet1',
-              specification: specification,
-              data: dataset
-          }
-      ]
-  );
-
-  // Set filename and send the file to client
   const filename = req.body.filename || 'example.xlsx';
-  res.attachment(filename);
-  res.send(report);
+  wb.write(filename, res);
 });
 
 router.get("/search/results", async (req, res) => {
