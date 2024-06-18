@@ -1020,16 +1020,16 @@ router.post('/export-to-excel', (req, res) => {
 
   // Define headers with their respective widths
   const headers = [
+    { header: 'STT', width: 10 },
+    { header: 'Họ và tên học viên', width: 30 },
     { header: 'Mã học viên', width: 30 },
-    { header: 'Họ tên', width: 30 },
     { header: 'Ngày sinh', width: 15 },
-    { header: 'Giới tính', width: 10 },
-    { header: 'Số CCCD', width: 25 },
-    { header: 'Hạng lái xe', width: 15 },
-    { header: 'Tổng thời gian', width: 20 },
-    { header: 'Tổng quãng đường(km)', width: 35 },
-    { header: '', width: 20 },
-    { header: 'Biển số xe', width: 20 },
+    { header: 'Số CCCD', width: 20 },
+    { header: 'Mã khoá học', width: 20 },
+    { header: 'Hạng', width: 10 },
+    { header: 'Thời gian đào tạo', width: 20 },
+    { header: 'Quãng đường đào tạo(km)', width: 35 },
+    { header: 'BIỂN SỐ XE', width: 20 },
     { header: '', width: 20 },
     { header: 'Kết quả', width: 10 },
   ];
@@ -1039,10 +1039,6 @@ router.post('/export-to-excel', (req, res) => {
     ws.cell(6, index + 1).string(header.header).style(headerStyle);
     ws.column(index + 1).setWidth(header.width);
   });
-
-  ws.cell(7, 9).string("B1").style(headerStyle);
-  ws.cell(7, 10).string("B2").style(headerStyle);
-  ws.cell(7, 11).string("C").style(headerStyle);
 
   // Function to determine the sorting order
   const getSortOrder = (khoaHoc) => {
@@ -1055,31 +1051,49 @@ router.post('/export-to-excel', (req, res) => {
   // Sort the keys based on the desired order
   const sortedKeys = Object.keys(dataByKhoaHoc).sort((a, b) => getSortOrder(a) - getSortOrder(b));
 
-  let rowIndex = 8;
-  sortedKeys.forEach(khoaHoc => {
+  let rowIndex = 7;
+  let overallIndex = 1; // Initialize global STT counter
+
+  sortedKeys.forEach((khoaHoc, idx) => {
     const data = dataByKhoaHoc[khoaHoc];
 
-    // Add header row with green background for all columns
+    // Add header row with green background for all columns (unchanged từ trước)
     ws.cell(rowIndex, 1, rowIndex, headers.length, true)
       .string(`CHÍNH KHOÁ ${khoaHoc}`)
       .style(cellGreenStyle);
     rowIndex++;
 
-    // Add data rows
-    data.forEach(item => {
-      ws.cell(rowIndex, 1).string(item["Mã học viên"]).style(cellNormalStyle);
+    // Count variable to keep track of student order within each khoaHoc
+    data.forEach((item) => {
+      // Add global student order number (STT)
+      ws.cell(rowIndex, 1).number(overallIndex).style(cellNormalStyle);
+      
       ws.cell(rowIndex, 2).string(item["Họ tên"]).style(cellNameStudentStyle);
-      ws.cell(rowIndex, 3).string(item["Ngày sinh"]).style(cellNormalStyle);
-      ws.cell(rowIndex, 4).string(item["Giới tính"]).style(cellNormalStyle);
+      ws.cell(rowIndex, 3).string(item["Mã học viên"]).style(cellNormalStyle);
+      ws.cell(rowIndex, 4).string(item["Ngày sinh"]).style(cellNormalStyle);
       ws.cell(rowIndex, 5).string(item["Số CCCD"]).style(cellNormalStyle);
-      ws.cell(rowIndex, 6).string(item["Hạng lái xe"]).style(cellNormalStyle);
-      ws.cell(rowIndex, 7).string(item["Tổng thời gian"]).style(cellNormalStyle);
-      ws.cell(rowIndex, 8).string(item["Tổng quãng đường(km)"]).style(cellNormalStyle);
-      ws.cell(rowIndex, 9).string(item["B1"]).style(cellNormalStyle);
-      ws.cell(rowIndex+1, 10).string(item["B2"]).style(cellNormalStyle);
-      ws.cell(rowIndex+1, 11).string(item["C"]).style(cellNormalStyle);
+      ws.cell(rowIndex, 7).string(item["Hạng lái xe"]).style(cellNormalStyle);
+      
+      // Assign vehicle license number based on license class
+      if (item["Hạng lái xe"] === "B1") {
+        ws.cell(rowIndex, 10).string(item["B1"]).style(cellNormalStyle);
+        ws.cell(rowIndex, 11).string("").style(cellNormalStyle); // Biển số xe B1
+      } else if (item["Hạng lái xe"] === "B2") {
+        ws.cell(rowIndex, 10).string(item["B2"]).style(cellNormalStyle);
+        ws.cell(rowIndex, 11).string(item["B1"]).style(cellNormalStyle);
+      } else if (item["Hạng lái xe"] === "C") {
+        ws.cell(rowIndex, 10).string(item["C"]).style(cellNormalStyle);
+        ws.cell(rowIndex, 11).string(item["B1"]).style(cellNormalStyle);
+      } else {
+        ws.cell(rowIndex, 10).string("").style(cellNormalStyle); // Default placeholder for other cases
+        ws.cell(rowIndex, 11).string("").style(cellNormalStyle);
+      }
+
+      ws.cell(rowIndex, 8).string(item["Tổng thời gian"]).style(cellNormalStyle);
+      ws.cell(rowIndex, 9).string(item["Tổng quãng đường(km)"]).style(cellNormalStyle);
       ws.cell(rowIndex, 12).string(item["Kết quả"]).style(cellNormalStyle);
       rowIndex++;
+      overallIndex++; // Increment global STT counter
     });
   });
 
