@@ -1,25 +1,231 @@
-<html>
-  <head>
-    <title>{{title}}</title>
-    <link rel="stylesheet" href="/stylesheets/style.css" />
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
-  </head>
-  <body>
-    <div class="header">
-      <a href="/search" class="logo">DAT</a>
-      <div class="header-right">
-        <a class="active" href="/search">Trang chủ</a>
-        <a href="/">Nhập danh sách phiên</a>
-        <a href="/xml">Nhập danh sách học viên</a>
-        <a href="/car">Nhập danh sách xe</a>
-        <a href="/allDat_session">Tất cả phiên</a>
-        <a href="/allTotal">Kết quả</a>
-        <a href="/reset">Reset</a>
-      </div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{{title}}</title>
+  <link rel="stylesheet" href="/stylesheets/style.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+      background-color: #1b2642;
+      color: white;
+    }
+
+    .toggle-btn {
+      font-size: 24px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: white;
+      width: 100%;
+      text-align: left;
+      padding: 15px 20px;
+      box-sizing: border-box;
+    }
+
+    .sidebar {
+      width: 250px;
+      height: 100%;
+      background-color: #1f2a44;
+      position: fixed;
+      left: 0;
+      top: 0;
+      transition: width 0.3s ease;
+      overflow-y: auto;
+      padding-top: 60px;
+      color: #9aa8d4;
+      box-sizing: border-box;
+    }
+
+    .sidebar.shrink {
+      width: 60px;
+    }
+
+    .sidebar a,
+    .sidebar .menu-item {
+      padding: 10px 20px;
+      text-decoration: none;
+      font-size: 16px;
+      color: #9aa8d4;
+      display: flex;
+      align-items: center;
+      transition: background-color 0.3s;
+      white-space: nowrap;
+      box-sizing: border-box;
+    }
+
+    .sidebar a:hover,
+    .sidebar .menu-item:hover {
+      background-color: #2c3b5a;
+    }
+
+    .sidebar .icon {
+      margin-right: 10px;
+      font-size: 20px;
+    }
+
+    .sidebar.shrink .icon {
+      margin-right: 0;
+      text-align: center;
+      width: 100%;
+    }
+
+    .sidebar.shrink a span,
+    .sidebar.shrink .menu-item span {
+      display: none;
+    }
+
+    .sidebar .dropdown {
+      display: none;
+      flex-direction: column;
+      padding-left: 20px;
+      transition: max-height 0.3s ease;
+      overflow: hidden;
+      max-height: 0;
+    }
+
+    .sidebar .dropdown.open {
+      display: flex;
+      max-height: 500px; /* Adjust according to content */
+    }
+
+    .header {
+      background-color: #2a3b55;
+      color: white;
+      width: 100%;
+      padding: 10px;
+      text-align: center;
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 2;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-left: 260px;
+      transition: padding-left 0.3s ease;
+      box-sizing: border-box;
+    }
+
+    .main-content {
+      padding-left: 260px;
+      padding-top: 70px;
+      transition: margin-left 0.3s ease, padding-left 0.3s ease;
+      background-color: #1b2642;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      box-sizing: border-box;
+    }
+
+    .main-content.shifted {
+      margin-left: 10px;
+      padding-left: 70px;
+    }
+
+    @media (max-width: 600px) {
+      .sidebar {
+        width: 200px;
+      }
+      .sidebar.shrink {
+        width: 60px;
+      }
+      .main-content {
+        padding-left: 210px;
+      }
+      .main-content.shifted {
+        margin-left: 60px;
+        padding-left: 70px;
+      }
+      .header {
+        padding-left: 210px;
+      }
+      .header.shifted {
+        padding-left: 70px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <button class="toggle-btn" onclick="toggleSidebar()">☰</button>
+    <a href="/search">
+      <i class="icon">🏠</i>
+      <span>Trang chủ</span>
+    </a>
+    <div class="menu-item" onclick="toggleDropdown('management-menu')">
+      <i class="icon">📂</i>
+      <span>Quản lý</span>
     </div>
-    <div style="padding-left:20px">
-      {{{body}}}
+    <div id="management-menu" class="dropdown">
+      <a href="/">
+        <span>Nhập dữ liệu học viên từ XML</span>
+      </a>
+      <a href="/xml">
+        <span>Nhập dữ liệu giáo viên từ XML</span>
+      </a>
+      <a href="/car">
+        <span>Thêm biển số Xe từ XML</span>
+      </a>
     </div>
-  </body>
+    <a href="/allDat_session">
+      <i class="icon">📋</i>
+      <span>Tất cả phiên</span>
+    </a>
+    <a href="/allTotal">
+      <i class="icon">📊</i>
+      <span>Kết quả</span>
+    </a>
+    <a href="/reset">
+      <i class="icon">🔄</i>
+      <span>Reset</span>
+    </a>
+  </div>
+  <div class="header">
+    <div class="left">
+      <img src="logo.png" alt="Logo" style="height: 40px;">
+      <span style="margin-left: 10px;">DAT</span>
+    </div>
+    <div class="center">
+      <span>TRUNG TÂM GIÁM SÁT THỜI GIAN VÀ QUÃNG ĐƯỜNG HỌC THỰC HÀNH LÁI XE Ô TÔ</span>
+    </div>
+    <div class="right">
+      <span>Trung tâm GDNN và SHLX Thanh Miện</span>
+      <span>shlx_thanhmien</span>
+    </div>
+  </div>
+  <div class="main-content">
+    {{{body}}}
+  </div>
+
+  <script>
+    function toggleSidebar() {
+      var sidebar = document.querySelector('.sidebar');
+      var mainContent = document.querySelector('.main-content');
+      var header = document.querySelector('.header');
+      sidebar.classList.toggle('shrink');
+      mainContent.classList.toggle('shifted');
+      header.classList.toggle('shifted');
+    }
+
+    function toggleDropdown(menuId) {
+      var dropdown = document.getElementById(menuId);
+      if (dropdown.classList.contains('open')) {
+        dropdown.classList.remove('open');
+        dropdown.style.maxHeight = '0px';
+      } else {
+        dropdown.classList.add('open');
+        dropdown.style.maxHeight = dropdown.scrollHeight + 'px';
+      }
+    }
+  </script>
+</body>
 </html>

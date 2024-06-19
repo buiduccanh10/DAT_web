@@ -3,163 +3,211 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Data Table with Pagination and Spinner</title>
     <style>
-    .spinner-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(255, 255, 255, 0.8);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 1000;
-        display: none;
-    }
-    .spinner {
-        border: 16px solid #f3f3f3;
-        border-radius: 50%;
-        border-top: 16px solid #3498db;
-        width: 120px;
-        height: 120px;
-        animation: spin 2s linear infinite;
-    }
-    @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
-</style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
 
+        .spinner-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            display: none;
+        }
+
+        .spinner {
+            border: 16px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 16px solid #3498db;
+            width: 80px;
+            height: 80px;
+            animation: spin 1.5s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .button-container {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .table-container {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+
+        th,td{
+            padding: 10px;
+            text-align: left;
+        }
+
+        .pagination-container {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+
+        .pagination-button {
+            padding: 8px 12px;
+            background-color: #3498db;
+            border: 1px solid #2980b9;
+            color: #fff;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .pagination-button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+    </style>
 </head>
 <body>
-    {{#if dat_ss}}
-    {{!-- <form action="/computeData" method="get">
-        <button type="submit" class="w3-btn w3-grey w3-border w3-border-grey w3-round">Tổng hợp</button>
-    </form> --}}
-
-    <form id="computeDataForm" action="/computeData" method="get">
-        <button type="submit" class="w3-btn w3-grey w3-border w3-border-grey w3-round">Tổng hợp</button>
-    </form>
-
-    <button class="w3-btn w3-green w3-border w3-border-green w3-round">Xuất Excel</button>
-
-    <div id="pagination">
-        <button onclick="previousPage()" id="prevBtn" disabled>Previous</button>
-        {{#each pages}}
-            <button onclick="showPage({{this}})">{{this}}</button>
-        {{/each}}
-        <button onclick="nextPage()" id="nextBtn">Next</button>
+    <div class="spinner-overlay" id="spinnerOverlay">
+        <div class="spinner"></div>
     </div>
 
-    <table border="1" id="dataTable">
-        <tr>
-            <th>STT</th>
-            <th>Mã Phiên</th>
-            <th>Tỉ lệ</th>
-            <th>Khóa học</th>
-            <th>Mã học viên</th>
-            <th>Họ tên</th>
-            <th>Họ tên giáo viên</th>
-            <th>Xe tập lái</th>
-            <th>Ngày đào tạo</th>
-            <th>Thời gian</th>
-            <th>Quãng đường</th>
-            <th>Trạng thái</th>
-            <th>Lý do</th>
-        </tr>
-        {{#each dat_ss}}
-            <tr>
-                <td>{{ this.STT}}</td>
-                <td>{{ this.MaPhien}}</td>
-                <td>{{ this.TiLe}}</td>
-                <td>{{ this.KhoaHoc}}</td>
-                <td>{{ this.MaHocVien}}</td>
-                <td>{{ this.HoTen}}</td>
-                <td>{{ this.HoTenGiaoVien}}</td>
-                <td>{{ this.XeTapLai}}</td>
-                <td>{{ this.NgayDaoTao}}</td>
-                <td>{{ this.ThoiGian}}</td>
-                <td>{{ this.QuangDuong}}</td>
-                {{#if this.TrangThai}}
-                    <td style="color: red;">Bảo lưu</td>
-                {{else}}
-                    <td></td>
-                {{/if}}
-                <td>{{ this.LyDoLoai}}</td>
-            </tr>
-        {{/each}}
-    </table>
-    {{/if}}
+    <div class="button-container">
+        <form id="computeDataForm" action="/computeData" method="get">
+            <button type="submit" class="pagination-button">Tổng hợp</button>
+        </form>
+        {{!-- <button class="pagination-button">Xuất Excel</button> --}}
+    </div>
 
-    <div class="spinner-overlay" id="spinnerOverlay">
-    <div class="spinner"></div>
+    <div class="table-container">
+        <table id="dataTable">
+            <thead>
+                <tr>
+                    <th>STT</th>
+                    <th>Mã Phiên</th>
+                    <th>Tỉ lệ</th>
+                    <th>Khóa học</th>
+                    <th>Mã học viên</th>
+                    <th>Họ tên</th>
+                    <th>Họ tên giáo viên</th>
+                    <th>Xe tập lái</th>
+                    <th>Ngày đào tạo</th>
+                    <th>Thời gian</th>
+                    <th>Quãng đường</th>
+                    <th>Trạng thái</th>
+                    <th>Lý do</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{#each dat_ss}}
+                    <tr>
+                        <td>{{ this.STT}}</td>
+                        <td>{{ this.MaPhien}}</td>
+                        <td>{{ this.TiLe}}</td>
+                        <td>{{ this.KhoaHoc}}</td>
+                        <td>{{ this.MaHocVien}}</td>
+                        <td>{{ this.HoTen}}</td>
+                        <td>{{ this.HoTenGiaoVien}}</td>
+                        <td>{{ this.XeTapLai}}</td>
+                        <td>{{ this.NgayDaoTao}}</td>
+                        <td>{{ this.ThoiGian}}</td>
+                        <td>{{ this.QuangDuong}}</td>
+                        {{#if this.TrangThai}}
+                            <td style="color: red;">Bảo lưu</td>
+                        {{else}}
+                            <td></td>
+                        {{/if}}
+                        <td>{{ this.LyDoLoai}}</td>
+                    </tr>
+                {{/each}}
+            </tbody>
+        </table>
+    </div>
 
-</div>
+    <div class="pagination-container">
+        <button id="prevBtn" class="pagination-button" onclick="previousPage()" disabled>Previous</button>
+        <div id="pagination"></div>
+        <button id="nextBtn" class="pagination-button" onclick="nextPage()">Next</button>
+    </div>
 
-</body>
-</html>
+    <script>
+        const computeDataForm = document.getElementById('computeDataForm');
+        const spinnerOverlay = document.getElementById('spinnerOverlay');
 
-<script>
-    const computeDataForm = document.getElementById('computeDataForm');
-    const spinnerOverlay = document.getElementById('spinnerOverlay');
+        computeDataForm.addEventListener('submit', function(event) {
+            spinnerOverlay.style.display = 'flex';
+        });
 
-    computeDataForm.addEventListener('submit', function(event) {
-        spinnerOverlay.style.display = 'flex';
-    });
+        const table = document.getElementById('dataTable').getElementsByTagName('tbody')[0];
+        const rows = Array.from(table.rows);
+        const rowsPerPage = 50;
+        const totalPages = Math.ceil(rows.length / rowsPerPage);
+        let currentPage = 1;
 
-    const table = document.getElementById('dataTable');
-    const pagination = document.getElementById('pagination');
-    const prevBtn = document.getElementById('prevBtn');
-    const nextBtn = document.getElementById('nextBtn');
+        function showPage(pageNumber) {
+            currentPage = pageNumber;
+            const startIndex = (pageNumber - 1) * rowsPerPage;
+            const endIndex = startIndex + rowsPerPage;
 
-    const rowsPerPage = 50;
-    const rowCount = table.rows.length - 1; // Excluding the header row
+            rows.forEach((row, index) => {
+                row.style.display = (index >= startIndex && index < endIndex) ? '' : 'none';
+            });
 
-    let totalPages = Math.ceil(rowCount / rowsPerPage);
-    if (totalPages === 0) totalPages = 1;
+            updatePagination();
+        }
 
-    let currentPage = 1;
-
-    function showPage(pageNumber) {
-        currentPage = pageNumber;
-        const startIndex = (pageNumber - 1) * rowsPerPage + 1;
-        const endIndex = pageNumber * rowsPerPage;
-
-        for (let i = 1; i <= rowCount; i++) {
-            if (i >= startIndex && i <= endIndex) {
-                table.rows[i].style.display = '';
-            } else {
-                table.rows[i].style.display = 'none';
+        function previousPage() {
+            if (currentPage > 1) {
+                showPage(currentPage - 1);
             }
         }
 
-        updatePaginationButtons();
-    }
-
-    function previousPage() {
-        if (currentPage > 1) {
-            showPage(currentPage - 1);
+        function nextPage() {
+            if (currentPage < totalPages) {
+                showPage(currentPage + 1);
+            }
         }
-    }
 
-    function nextPage() {
-        if (currentPage < totalPages) {
-            showPage(currentPage + 1);
+        function updatePagination() {
+            document.getElementById('prevBtn').disabled = (currentPage === 1);
+            document.getElementById('nextBtn').disabled = (currentPage === totalPages);
+
+            const paginationContainer = document.getElementById('pagination');
+            paginationContainer.innerHTML = '';
+
+            for (let i = 1; i <= totalPages; i++) {
+                const pageButton = document.createElement('button');
+                pageButton.className = 'pagination-button';
+                pageButton.innerText = i;
+                pageButton.onclick = () => showPage(i);
+                if (i === currentPage) {
+                    pageButton.disabled = true;
+                }
+                paginationContainer.appendChild(pageButton);
+            }
         }
-    }
 
-    function updatePaginationButtons() {
-        prevBtn.disabled = currentPage === 1;
-        nextBtn.disabled = currentPage === totalPages;
-    }
-
-    // Generate page numbers
-    const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
-
-
-    // Show the first page by default
-    showPage(1);
-</script>
-
+        // Initialize the table by showing the first page
+        showPage(1);
+    </script>
+</body>
+</html>

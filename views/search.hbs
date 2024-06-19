@@ -5,7 +5,69 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{title}}</title>
     <style>
-        /* CSS cho đẹp */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+        }
+
+        h1, h2 {
+            color: #1a73e8;
+        }
+
+        form {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        input[type="text"] {
+            margin-left: 10px;
+            margin-right: 10px;
+            width: 50%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        button {
+            background-color: #1a73e8;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+
+        img {
+            height: 130px;
+            width: 100px;
+            object-fit: cover;
+        }
+
+        .toggle-btn {
+            margin-bottom: 20px;
+        }
     </style>
     <script>
         function toggleList() {
@@ -16,17 +78,15 @@
     </script>
 </head>
 <body>
-    <h1>Search</h1>
-    <form action="/search/results" method="GET">
+    <form action="/search/results" method="GET" style="display: flex;">
         <label for="query">Nhập Họ tên, Mã học viên hoặc Số CCCD:</label>
-        <input style="width:20%;" type="text" id="query" name="query" placeholder="Nhập Họ tên, mã học viên, số CMT..." value="{{query}}">
-        <button type="submit" class="w3-btn w3-white w3-border w3-border-blue w3-round">Search</button>
+        <input type="text" id="query" name="query" placeholder="Nhập Họ tên, mã học viên, số CMT..." value="{{query}}">
+        <button type="submit">Search</button>
     </form>
 
-    <!-- Nếu có kết quả, hiển thị bảng -->
     {{#if results.length}}
         <h2>Kết quả tìm kiếm</h2>
-        <table border="1">
+        <table>
             <thead>
                 <tr>
                     <th>Mã học viên</th>
@@ -53,7 +113,7 @@
                 {{#each results}}
                     <tr>
                         <td>{{ this.MaHocVien}}</td>
-                        <td><img src="data:image/jpeg;base64,{{ this.Anh}}" style="height: 130px; width:100px;" alt="Ảnh"></td>
+                        <td><img src="data:image/jpeg;base64,{{ this.Anh}}" alt="Ảnh"></td>
                         <td>{{this.HoTen}}</td>
                         <td>{{this.KhoaHoc}}</td>
                         <td>{{this.NgaySinh}}</td>
@@ -79,129 +139,129 @@
             </tbody>
         </table> 
     {{else}}
+    <div style="display: flex;">
         <label for="trangthai">Chọn danh sách hiển thị:</label>
-    <select id="trangthai" name="trangthai" onchange="toggleList()">
-        <option value="fail" selected>Bảo lưu</option>
-        <option value="pass">Đạt</option>
-    </select>
-
-    <!-- Hiển thị danh sách học viên bảo lưu (mặc định) -->
-    <div id="student_fail" style="display: block;">
-        <h2>Danh sách học viên bảo lưu: {{student_fail.length}}</h2>
-        <table border="1">
-            <thead>
-                <tr>
-                    <th>Mã học viên</th>
-                    <th>Ảnh</th>
-                    <th>Họ tên</th>
-                    <th>Khoá học</th>
-                    <th>Ngày sinh</th>
-                    <th>Giới tính</th>
-                    <th>Số CCCD</th>
-                    <th>Hạng</th>
-                    <th>Tổng thời gian B11</th>
-                    <th>Tổng quãng đường B11</th>
-                    <th>Tổng quãng đường sáng</th>
-                    <th>Tổng thời gian sáng</th>
-                    <th>Tổng quãng đường tối</th>
-                    <th>Tổng thời gian tối</th>
-                    <th>Tổng thời gian</th>
-                    <th>Tổng quãng đường</th>
-                    <th>Trạng thái</th>
-                    <th>Lý do</th>
-                </tr>
-            </thead>
-            <tbody>
-                {{#each student_fail}}
-                    <tr>
-                        <td>{{ this.MaHocVien}}</td>
-                        <td><img src="data:image/jpeg;base64,{{ this.Anh}}" style="height: 130px; width:100px;" alt="Ảnh"></td>
-                        <td>{{this.HoTen}}</td>
-                        <td>{{this.KhoaHoc}}</td>
-                        <td>{{this.NgaySinh}}</td>
-                        <td>{{this.GioiTinh}}</td>
-                        <td>{{this.SoCMT}}</td>
-                        <td>{{this.Category}}</td>
-                        <td>{{this.TongThoiGianXeSoTuDong}}</td>
-                        <td>{{this.TongQuangDuongXeSoTuDong}}</td>
-                        <td>{{this.TotalMorningDistance}}</td>
-                        <td>{{this.TotalMorningTime}}</td>
-                        <td>{{this.TotalEveningDistance}}</td>
-                        <td>{{this.TotalEveningTime}}</td>
-                        <td>{{this.TotalDuration}}</td>
-                        <td>{{this.TotalDistance}}</td>
-                        {{#if this.TrangThai}}
-                            <td style="color: red;">Bảo lưu</td>
-                        {{else}}
-                            <td>Đạt</td>
-                        {{/if}}
-                        <td>{{this.LyDo}}</td>
-                    </tr>
-                {{/each}}
-            </tbody>
-        </table>
+        <select id="trangthai" name="trangthai" onchange="toggleList()">
+            <option value="fail" selected>Bảo lưu</option>
+            <option value="pass">Đạt</option>
+        </select>
     </div>
+        
 
-    <!-- Hiển thị danh sách học viên đã qua -->
-    <div id="student_pass" style="display: none;">
-        <h2>Danh sách học viên đạt: {{student_pass.length}}</h2>
-        <table border="1">
-            <thead>
-                <tr>
-                    <th>Mã học viên</th>
-                    <th>Ảnh</th>
-                    <th>Họ tên</th>
-                    <th>Khoá học</th>
-                    <th>Ngày sinh</th>
-                    <th>Giới tính</th>
-                    <th>Số CCCD</th>
-                    <th>Hạng</th>
-                    <th>Tổng thời gian B11</th>
-                    <th>Tổng quãng đường B11</th>
-                    <th>Tổng quãng đường sáng</th>
-                    <th>Tổng thời gian sáng</th>
-                    <th>Tổng quãng đường tối</th>
-                    <th>Tổng thời gian tối</th>
-                    <th>Tổng thời gian</th>
-                    <th>Tổng quãng đường</th>
-                    <th>Trạng thái</th>
-                </tr>
-            </thead>
-            <tbody>
-                {{#each student_pass}}
+        <div id="student_fail" style="display: block;">
+            <h2>Danh sách học viên bảo lưu: {{student_fail.length}}</h2>
+            <table>
+                <thead>
                     <tr>
-                        <td>{{ this.MaHocVien}}</td>
-                        <td><img src="data:image/jpeg;base64,{{ this.Anh}}" style="height: 130px; width:100px;" alt="Ảnh"></td>
-                        <td>{{this.HoTen}}</td>
-                        <td>{{this.KhoaHoc}}</td>
-                        <td>{{this.NgaySinh}}</td>
-                        <td>{{this.GioiTinh}}</td>
-                        <td>{{this.SoCMT}}</td>
-                        <td>{{this.Category}}</td>
-                        <td>{{this.TongThoiGianXeSoTuDong}}</td>
-                        <td>{{this.TongQuangDuongXeSoTuDong}}</td>
-                        <td>{{this.TotalMorningDistance}}</td>
-                        <td>{{this.TotalMorningTime}}</td>
-                        <td>{{this.TotalEveningDistance}}</td>
-                        <td>{{this.TotalEveningTime}}</td>
-                        <td>{{this.TotalDuration}}</td>
-                        <td>{{this.TotalDistance}}</td>
-                        {{#if this.TrangThai}}
-                            <td style="color: red;">Bảo lưu</td>
-                        {{else}}
-                            <td>Đạt</td>
-                        {{/if}}
+                        <th>Mã học viên</th>
+                        <th>Ảnh</th>
+                        <th>Họ tên</th>
+                        <th>Khoá học</th>
+                        <th>Ngày sinh</th>
+                        <th>Giới tính</th>
+                        <th>Số CCCD</th>
+                        <th>Hạng</th>
+                        <th>Tổng thời gian B11</th>
+                        <th>Tổng quãng đường B11</th>
+                        <th>Tổng quãng đường sáng</th>
+                        <th>Tổng thời gian sáng</th>
+                        <th>Tổng quãng đường tối</th>
+                        <th>Tổng thời gian tối</th>
+                        <th>Tổng thời gian</th>
+                        <th>Tổng quãng đường</th>
+                        <th>Trạng thái</th>
+                        <th>Lý do</th>
                     </tr>
-                {{/each}}
-            </tbody>
-        </table>
-    </div>
+                </thead>
+                <tbody>
+                    {{#each student_fail}}
+                        <tr>
+                            <td>{{ this.MaHocVien}}</td>
+                            <td><img src="data:image/jpeg;base64,{{ this.Anh}}" alt="Ảnh"></td>
+                            <td>{{this.HoTen}}</td>
+                            <td>{{this.KhoaHoc}}</td>
+                            <td>{{this.NgaySinh}}</td>
+                            <td>{{this.GioiTinh}}</td>
+                            <td>{{this.SoCMT}}</td>
+                            <td>{{this.Category}}</td>
+                            <td>{{this.TongThoiGianXeSoTuDong}}</td>
+                            <td>{{this.TongQuangDuongXeSoTuDong}}</td>
+                            <td>{{this.TotalMorningDistance}}</td>
+                            <td>{{this.TotalMorningTime}}</td>
+                            <td>{{this.TotalEveningDistance}}</td>
+                            <td>{{this.TotalEveningTime}}</td>
+                            <td>{{this.TotalDuration}}</td>
+                            <td>{{this.TotalDistance}}</td>
+                            {{#if this.TrangThai}}
+                                <td style="color: red;">Bảo lưu</td>
+                            {{else}}
+                                <td>Đạt</td>
+                            {{/if}}
+                            <td>{{this.LyDo}}</td>
+                        </tr>
+                    {{/each}}
+                </tbody>
+            </table>
+        </div>
+
+        <div id="student_pass" style="display: none;">
+            <h2>Danh sách học viên đạt: {{student_pass.length}}</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Mã học viên</th>
+                        <th>Ảnh</th>
+                        <th>Họ tên</th>
+                        <th>Khoá học</th>
+                        <th>Ngày sinh</th>
+                        <th>Giới tính</th>
+                        <th>Số CCCD</th>
+                        <th>Hạng</th>
+                        <th>Tổng thời gian B11</th>
+                        <th>Tổng quãng đường B11</th>
+                        <th>Tổng quãng đường sáng</th>
+                        <th>Tổng thời gian sáng</th>
+                        <th>Tổng quãng đường tối</th>
+                        <th>Tổng thời gian tối</th>
+                        <th>Tổng thời gian</th>
+                        <th>Tổng quãng đường</th>
+                        <th>Trạng thái</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{#each student_pass}}
+                        <tr>
+                            <td>{{ this.MaHocVien}}</td>
+                            <td><img src="data:image/jpeg;base64,{{ this.Anh}}" alt="Ảnh"></td>
+                            <td>{{this.HoTen}}</td>
+                            <td>{{this.KhoaHoc}}</td>
+                            <td>{{this.NgaySinh}}</td>
+                            <td>{{this.GioiTinh}}</td>
+                            <td>{{this.SoCMT}}</td>
+                            <td>{{this.Category}}</td>
+                            <td>{{this.TongThoiGianXeSoTuDong}}</td>
+                            <td>{{this.TongQuangDuongXeSoTuDong}}</td>
+                            <td>{{this.TotalMorningDistance}}</td>
+                            <td>{{this.TotalMorningTime}}</td>
+                            <td>{{this.TotalEveningDistance}}</td>
+                            <td>{{this.TotalEveningTime}}</td>
+                            <td>{{this.TotalDuration}}</td>
+                            <td>{{this.TotalDistance}}</td>
+                            {{#if this.TrangThai}}
+                                <td style="color: red;">Bảo lưu</td>
+                            {{else}}
+                                <td>Đạt</td>
+                            {{/if}}
+                        </tr>
+                    {{/each}}
+                </tbody>
+            </table>
+        </div>
     {{/if}}
 
-    <!-- Nếu có phiên, hiển thị bảng -->
     {{#if sessions.length}}
         <h2>Các phiên liên quan</h2>
-        <table border="1">
+        <table>
             <thead>
                 <tr>
                     <th>STT</th>
