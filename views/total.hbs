@@ -137,6 +137,7 @@ table th, table td {
                 <th hidden>B1</th>
                 <th hidden>B2</th>
                 <th hidden>C</th>
+                <th hidden>MaKhoaHoc</th>
             </tr>
         </thead>
         <tbody>
@@ -167,6 +168,7 @@ table th, table td {
                 <td hidden>{{ this.B1}}</td>
                 <td hidden>{{ this.B2}}</td>
                 <td hidden>{{ this.C}}</td>
+                <td hidden>{{ this.MaKhoaHoc}}</td>
             </tr>
             {{/each}}
         </tbody>
@@ -211,6 +213,7 @@ async function exportToExcel() {
                     "B1": row.cells[18].innerText,
                     "B2": row.cells[19].innerText,
                     "C": row.cells[20].innerText,
+                    "Mã khoá học":row.cells[21].innerText,
                 });
             });
 

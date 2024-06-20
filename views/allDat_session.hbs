@@ -10,39 +10,7 @@
             padding: 20px;
         }
 
-        .spinner-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            display: none;
-        }
-
-        .spinner {
-            border: 16px solid #f3f3f3;
-            border-radius: 50%;
-            border-top: 16px solid #3498db;
-            width: 80px;
-            height: 80px;
-            animation: spin 1.5s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .button-container {
-            margin-bottom: 20px;
-            display: flex;
-            justify-content: space-between;
-        }
+        
 
         .table-container {
             position: relative;
@@ -70,34 +38,11 @@
             margin-top: 10px;
         }
 
-        .pagination-button {
-            padding: 8px 12px;
-            background-color: #3498db;
-            border: 1px solid #2980b9;
-            color: #fff;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-
-        .pagination-button:disabled {
-            background-color: #bdc3c7;
-            cursor: not-allowed;
-        }
+        
 
     </style>
 </head>
 <body>
-    <div class="spinner-overlay" id="spinnerOverlay">
-        <div class="spinner"></div>
-    </div>
-
-    <div class="button-container">
-        <form id="computeDataForm" action="/computeData" method="get">
-            <button type="submit" class="pagination-button">Tổng hợp</button>
-        </form>
-        {{!-- <button class="pagination-button">Xuất Excel</button> --}}
-    </div>
-
     <div class="table-container">
         <table id="dataTable">
             <thead>
@@ -151,11 +96,6 @@
 
     <script>
         const computeDataForm = document.getElementById('computeDataForm');
-        const spinnerOverlay = document.getElementById('spinnerOverlay');
-
-        computeDataForm.addEventListener('submit', function(event) {
-            spinnerOverlay.style.display = 'flex';
-        });
 
         const table = document.getElementById('dataTable').getElementsByTagName('tbody')[0];
         const rows = Array.from(table.rows);

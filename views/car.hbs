@@ -2,6 +2,26 @@
 <html>
 <head>
     <title>Upload Car Excel File</title>
+    <style>
+         .button-container {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .pagination-button {
+            padding: 8px 12px;
+            background-color: #3498db;
+            border: 1px solid #2980b9;
+            color: #fff;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .pagination-button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+    </style>
 </head>
 <body>
     <h1>Tải lên file Excel danh sách xe</h1>
@@ -11,7 +31,9 @@
     </form>
     {{#if data}}
         <h2>Excel Data:</h2>
-        <button id="saveButton" class="w3-btn w3-green w3-border w3-border-green w3-round">Lưu</button>
+         <div class="button-container">
+                <button id="saveButton" class="pagination-button">Lưu</button>
+    </div>
 
         <table border="1"  id="data-table">
         <tr>

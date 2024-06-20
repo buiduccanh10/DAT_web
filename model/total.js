@@ -21,7 +21,8 @@ const totalSchema = new mongoose.Schema({
   LyDo:String,
   B1: String,
   B2: String,
-  C: String
+  C: String,
+  MaKhoaHoc:String
 });
 
 const Total = mongoose.model("Total", totalSchema, "total");

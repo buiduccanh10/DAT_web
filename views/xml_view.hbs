@@ -2,6 +2,26 @@
 <html>
 <head>
     <title>Upload XML File</title>
+    <style>
+         .button-container {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .pagination-button {
+            padding: 8px 12px;
+            background-color: #3498db;
+            border: 1px solid #2980b9;
+            color: #fff;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .pagination-button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+    </style>
 </head>
 <body>
     <h1>Tải lên file XML danh sách học viên</h1>
@@ -11,12 +31,16 @@
     </form>
     {{#if data}}
     <h2>XML Data:</h2>
-    <button id="saveButton" class="w3-btn w3-green w3-border w3-border-green w3-round">Lưu</button>
+    <div class="button-container">
+                <button id="saveButton" class="pagination-button">Lưu</button>
+    </div>
     <table border="1" id="data-table">
         <thead>
             <tr>
                 <th>STT</th>
                 <th>Mã Học Viên</th>
+                <th>Khoá học</th>
+                <th>Mã khoá học</th>
                 <th>Họ Tên</th>
                 <th>Ngày Sinh</th>
                 <th>Giới Tính</th>
@@ -35,6 +59,8 @@
             <tr>
                 <td>{{this.STT}}</td>
                 <td>{{lookup this "Mã Học Viên"}}</td>
+                <td>{{lookup this "Khoá học"}}</td>
+                <td>{{lookup this "Mã khoá học"}}</td>
                 <td>{{lookup this "Họ Tên"}}</td>
                 <td>{{lookup this "Ngày Sinh"}}</td>
                 <td>{{lookup this "Giới Tính"}}</td>
@@ -61,17 +87,19 @@
                 const rowData = {
                     STT: row.cells[0].textContent,
                     MaHocVien: row.cells[1].textContent,
-                    HoTen: row.cells[2].textContent,
-                    NgaySinh: row.cells[3].textContent,
-                    GioiTinh: row.cells[4].textContent,
-                    SoCMT: row.cells[5].textContent,
-                    NgayCapCMT: row.cells[6].textContent,
-                    NoiCapCMT: row.cells[7].textContent,
-                    NgayNhanHoSo: row.cells[8].textContent,
-                    SoGPLX: row.cells[9].textContent,
-                    HangGPLX: row.cells[10].textContent,
-                    NoiCapGPLX: row.cells[11].textContent,
-                    Anh: row.cells[12].querySelector('img').src.split(',')[1] // Get base64 string without data:image/jpeg;base64,
+                    KhoaHoc:row.cells[2].textContent,
+                    MaKhoaHoc:row.cells[3].textContent,
+                    HoTen: row.cells[4].textContent,
+                    NgaySinh: row.cells[5].textContent,
+                    GioiTinh: row.cells[6].textContent,
+                    SoCMT: row.cells[7].textContent,
+                    NgayCapCMT: row.cells[8].textContent,
+                    NoiCapCMT: row.cells[9].textContent,
+                    NgayNhanHoSo: row.cells[10].textContent,
+                    SoGPLX: row.cells[11].textContent,
+                    HangGPLX: row.cells[12].textContent,
+                    NoiCapGPLX: row.cells[13].textContent,
+                    Anh: row.cells[14].querySelector('img').src.split(',')[1] // Get base64 string without data:image/jpeg;base64,
                 };
                 data.push(rowData);
             });

@@ -10,7 +10,8 @@ const Student = require("../model/student");
 const Dat_session = require("../model/dat_session");
 const Total = require("../model/total");
 const Car = require("../model/car");
-const excel = require('excel4node');
+const dateDAT = require("../model/dateDAT");
+const excel = require("excel4node");
 
 /* GET home page. */
 router.get("/", function (req, res, next) {
@@ -28,12 +29,17 @@ router.get("/search", async function (req, res, next) {
     sessions: [],
     student_pass,
     student_fail,
-    displayList: "fail"
+    displayList: "fail",
   });
 });
 
+router.get("/dateDAT", async function (req, res, next) {
+  const data = await dateDAT.find({});
+  res.render("dateDAT", { data });
+});
+
 router.get("/xml", function (req, res, next) {
-  res.render("xml_view", { title: "Express" });
+  res.render("xml_view", {});
 });
 
 router.get("/car", function (req, res, next) {
@@ -52,14 +58,6 @@ router.get("/allStudent", async function (req, res, next) {
 
 router.get("/allDat_session", async function (req, res, next) {
   const dat_ss = await Dat_session.find({});
-
-  // dat_ss.forEach((col) => {
-  //   col.TiLe = Math.round(parseFloat(col.TiLe));
-  //   const tiLeLessThan75 = parseInt(col.TiLe) < 90;
-  //   const durationGreaterThanOrEqualTo4Hours =
-  //     isDurationGreaterThan4Hours(col.ThoiGian);
-  //   col.TrangThai = tiLeLessThan75 || durationGreaterThanOrEqualTo4Hours;
-  // });
 
   dat_ss.sort((a, b) => {
     return parseInt(a.STT) - parseInt(b.STT);
@@ -84,28 +82,6 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({ storage: storage });
-
-// router.post("/upload", upload.single("file"), (req, res) => {
-//   const filePath = req.file.path;
-
-//   // Đọc file Excel
-//   const workbook = xlsx.readFile(filePath);
-//   const sheet = workbook.Sheets[workbook.SheetNames[0]];
-//   let data = xlsx.utils.sheet_to_json(sheet);
-
-//   // Chuyển đổi giá trị số thập phân thành ngày tháng
-//   data = data.map((row) => {
-//     if (row["Ngày đào tạo"] && !isNaN(row["Ngày đào tạo"])) {
-//       const excelDate = row["Ngày đào tạo"];
-//       const jsDate = new Date((excelDate - 25569) * 86400 * 1000); // Chuyển đổi từ số ngày Excel thành timestamp JavaScript
-//       row["Ngày đào tạo"] = moment(jsDate).format("DD/MM/YY HH:mm"); // Định dạng ngày tháng bằng moment
-//     }
-//     return row;
-//   });
-
-//   // Hiển thị dữ liệu
-//   res.render("index", { data: data });
-// });
 
 router.post("/upload", upload.single("file"), (req, res) => {
   const filePath = req.file.path;
@@ -147,140 +123,6 @@ router.post("/uploadCar", upload.single("file"), (req, res) => {
   res.render("car", { data: data });
 });
 
-// router.post("/save-dat-session", (req, res) => {
-//   const data = req.body;
-
-//   if (!data || data.length === 0) {
-//     return res.status(400).send("No data to save");
-//   }
-
-//   // dat_ss.forEach((col) => {
-//   //   col.TiLe = Math.round(parseFloat(col.TiLe));
-//   //   const tiLeLessThan75 = parseInt(col.TiLe) < 90;
-//   //   const durationGreaterThanOrEqualTo4Hours =
-//   //     isDurationGreaterThan4Hours(col.ThoiGian);
-//   //   col.TrangThai = tiLeLessThan75 || durationGreaterThanOrEqualTo4Hours;
-//   // });
-
-//   data.forEach(async (item) => {
-//     item["TiLe"] = Math.round(parseFloat(item["TiLe"]));
-//     const tiLeLessThan75 = parseInt(item["TiLe"]) < 90;
-//     const durationGreaterThanOrEqualTo4Hours = isDurationGreaterThan4Hours(
-//       item["ThoiGian"]
-//     );
-//     const TrangThai = tiLeLessThan75 || durationGreaterThanOrEqualTo4Hours;
-//     const newItem = new Dat_session({
-//       _id: item["MaPhien"],
-//       TrangThai: TrangThai,
-//       ...item,
-//     });
-
-//     try {
-//       await newItem.save();
-//     } catch (err) {
-//       console.error("Error saving data:", err);
-//     }
-//   });
-
-//   res.sendStatus(200);
-// });
-
-// router.post("/save-dat-session", async (req, res) => {
-//   const data = req.body;
-
-//   if (!data || data.length === 0) {
-//     return res.status(400).send("No data to save");
-//   }
-
-//   // Lặp qua từng mục dữ liệu
-//   for (let i = 0; i < data.length; i++) {
-//     const item = data[i];
-
-//     // Chuyển đổi thời gian từ chuỗi sang phút
-//     const thoiGianPhut =
-//       parseInt(item.ThoiGian.split("h")[0]) * 60 +
-//       parseInt(item.ThoiGian.split("h")[1]);
-
-//     // Tính toán thời gian sáng, thời gian tối, và quãng đường sáng/tối
-//     let thoiGianSang = 0;
-//     let thoiGianToi = 0;
-//     let quangDuongSang = 0;
-//     let quangDuongToi = 0;
-
-//     // Kiểm tra xem NgayDaoTao + ThoiGian nằm trong khoảng thời gian sáng hay tối không
-//     const ngayDaoTao = moment(item.NgayDaoTao, "DD/MM/YY HH:mm");
-//     const ketThucSang = moment(ngayDaoTao).set({
-//       hour: 18,
-//       minute: 59,
-//       second: 59,
-//     });
-//     const ketThucToi = moment(ngayDaoTao).add(thoiGianPhut, "minutes");
-
-//     if (ngayDaoTao.isAfter(ketThucSang)) {
-//       // Toàn bộ thời gian là thời gian tối
-//       thoiGianToi = thoiGianPhut;
-//       quangDuongToi = parseFloat(item.QuangDuong);
-//     } else if (ketThucSang.isBefore(ketThucToi)) {
-//       // Thời gian sáng
-//       thoiGianSang = ketThucSang.diff(ngayDaoTao, "minutes");
-//       quangDuongSang =
-//         (parseFloat(item.QuangDuong) * thoiGianSang) / thoiGianPhut;
-
-//       // Thời gian tối
-//       thoiGianToi = thoiGianPhut - thoiGianSang;
-//       quangDuongToi = parseFloat(item.QuangDuong) - quangDuongSang;
-//     } else {
-//       // Thời gian toàn bộ là thời gian sáng
-//       thoiGianSang = thoiGianPhut;
-//       quangDuongSang = parseFloat(item.QuangDuong);
-//     }
-
-//     // Thêm thông tin tính toán vào mục dữ liệu
-//     item.TotalMorningTime = thoiGianSang;
-//     item.TotalEveningTime = thoiGianToi;
-//     item.TotalMorningDistance = quangDuongSang;
-//     item.TotalEveningDistance = quangDuongToi;
-
-//     // Kiểm tra điều kiện TiLe và ThoiGian
-//     item["TiLe"] = Math.round(parseFloat(item["TiLe"]));
-//     const tiLeLessThan75 = parseInt(item["TiLe"]) < 90;
-//     const durationGreaterThanOrEqualTo4Hours = isDurationGreaterThan4Hours(
-//       item["ThoiGian"]
-//     );
-
-//     // Tạo một mảng để lưu trữ các lý do
-//     const lyDoLoaiList = [];
-
-//     // Kiểm tra các điều kiện và thêm lý do vào mảng
-//     if (tiLeLessThan75) {
-//       lyDoLoaiList.push("Tỉ lệ dưới 90");
-//     }
-//     if (durationGreaterThanOrEqualTo4Hours) {
-//       lyDoLoaiList.push("Thời gian quá 4h một ngày");
-//     }
-
-//     // Kết hợp các lý do thành một chuỗi
-//     const lyDoLoai = lyDoLoaiList.join(", ");
-
-//     // Tạo một mục mới của Dat_session với các thông tin và lý do được cập nhật
-//     const newItem = new Dat_session({
-//       _id: item["MaPhien"],
-//       TrangThai: tiLeLessThan75 || durationGreaterThanOrEqualTo4Hours,
-//       LyDoLoai: lyDoLoai,
-//       ...item,
-//     });
-
-//     // Lưu vào cơ sở dữ liệu
-//     try {
-//       await newItem.save();
-//     } catch (err) {
-//       console.error("Error saving data:", err);
-//     }
-//   }
-
-//   res.sendStatus(200);
-// });
-
 router.post("/save-car", async (req, res) => {
   const carsData = req.body;
 
@@ -293,8 +135,29 @@ router.post("/save-car", async (req, res) => {
 });
 
 router.post("/save-dat-session", async (req, res) => {
+  const ss_check = await Dat_session.find({});
+  const tt_check = await Total.find({});
+
+  if (ss_check.length > 0 || tt_check.length > 0) {
+    await Total.deleteMany({});
+    await Dat_session.deleteMany({});
+
+    // Xóa tất cả các file trong thư mục /uploads
+    const uploadDir = path.join(__dirname, "..", "uploads");
+    fs.readdir(uploadDir, (err, files) => {
+      if (err) throw err;
+
+      for (const file of files) {
+        fs.unlink(path.join(uploadDir, file), (err) => {
+          if (err) throw err;
+        });
+      }
+    });
+  }
+
   const data = req.body;
   const cars = await Car.find({ LoaiHangXe: "B11" });
+  const dateDATs = await dateDAT.find({});
 
   if (!data || data.length === 0) {
     return res.status(400).send("No data to save");
@@ -326,6 +189,7 @@ router.post("/save-dat-session", async (req, res) => {
     });
     const ketThucToi = moment(ngayDaoTao).add(thoiGianPhut, "minutes");
 
+    // chia sang toi thoi
     if (ngayDaoTao.isAfter(ketThucSang)) {
       // Toàn bộ thời gian là thời gian tối
       thoiGianToi = thoiGianPhut;
@@ -355,10 +219,32 @@ router.post("/save-dat-session", async (req, res) => {
     // Tạo một mảng để lưu trữ các lý do
     const lyDoLoaiList = [];
 
+    //
+    const matchingDateDAT = dateDATs.find(
+      (dateDAT) => dateDAT.KhoaHoc === item.KhoaHoc
+    );
+
+    if (matchingDateDAT) {
+      const sessionDate = moment(item.NgayDaoTao, "DD/MM/YY HH:mm");
+      const startDate = moment(matchingDateDAT.startDate, "DD/MM/YY");
+      const endDate = moment(matchingDateDAT.endDate, "DD/MM/YY").endOf("day"); // End date should be the end of the day
+
+      // Kiểm tra ngày đào tạo nằm trong khoảng từ ngày bắt đầu đến ngày kết thúc
+      if (
+        !sessionDate.isSameOrAfter(startDate) ||
+        !sessionDate.isSameOrBefore(endDate)
+      ) {
+        lyDoLoaiList.push(
+          `Ngoài ngày đào tạo của khoá ${matchingDateDAT.KhoaHoc}`
+        );
+      }
+    }
+
     if (
       matchingCar &&
       matchingCar.LoaiHangXe === "B11" &&
-      ngayDaoTao.isAfter(ketThucSang) && !item.KhoaHoc.includes("B1")
+      ngayDaoTao.isAfter(ketThucSang) &&
+      !item.KhoaHoc.includes("B1")
     ) {
       lyDoLoaiList.push("Hạng của bạn không được đi B11 ban đêm");
       item.TrangThai = true;
@@ -393,7 +279,10 @@ router.post("/save-dat-session", async (req, res) => {
       // Tạo một mục mới của Dat_session với các thông tin và lý do được cập nhật
       const newItem = new Dat_session({
         _id: item["MaPhien"],
-        TrangThai: tiLeLessThan75 || durationGreaterThanOrEqualTo4Hours || thoiGianPhut <= 5,
+        TrangThai:
+          tiLeLessThan75 ||
+          durationGreaterThanOrEqualTo4Hours ||
+          thoiGianPhut <= 5,
         LyDoLoai: lyDoLoai,
         ThoiGianXeTuDong: thoiGianPhut,
         QuangDuongXeTuDong: parseFloat(item.QuangDuong),
@@ -411,7 +300,10 @@ router.post("/save-dat-session", async (req, res) => {
       // Tạo một mục mới của Dat_session với các thông tin và lý do được cập nhật
       const newItem = new Dat_session({
         _id: item["MaPhien"],
-        TrangThai: tiLeLessThan75 || durationGreaterThanOrEqualTo4Hours || thoiGianPhut <= 5,
+        TrangThai:
+          tiLeLessThan75 ||
+          durationGreaterThanOrEqualTo4Hours ||
+          thoiGianPhut <= 5,
         LyDoLoai: lyDoLoai,
         ThoiGianXeTuDong: 0,
         QuangDuongXeTuDong: 0,
@@ -476,14 +368,14 @@ router.post("/save-dat-session", async (req, res) => {
   //     }
   //   }
   // }
-  
+
   for (const [studentId, dateMap] of studentMap.entries()) {
     for (const [date, data] of dateMap.entries()) {
       // Check if the day total duration or distance exceed limits
       if (data.totalDuration > 600 || data.totalDistance > 400) {
         let latestSession = null;
         let latestEndTime = null;
-  
+
         // Find the latest end time session in the day
         for (const session of data.sessions) {
           const endTime = moment(session.NgayDaoTao, "DD/MM/YY HH:mm"); // Assuming endDateTime in a different format as date and time combined
@@ -492,7 +384,7 @@ router.post("/save-dat-session", async (req, res) => {
             latestEndTime = endTime;
           }
         }
-  
+
         if (latestSession) {
           const reason = `Ngày ${date} có tổng thời gian hoặc km quá giới hạn / ngày`;
           // Update the last session in the day
@@ -500,202 +392,141 @@ router.post("/save-dat-session", async (req, res) => {
           latestSession.LyDoLoai = latestSession.LyDoLoai
             ? `${latestSession.LyDoLoai}, ${reason}`
             : reason;
-  
+
           // Collect the updated session for database update
           updates.push(latestSession);
         }
       }
     }
   }
-  
+
   // Assuming you have grouped sessions as described above in studentMap
-for (const [studentId, dateMap] of studentMap.entries()) {
-  for (const [date, data] of dateMap.entries()) {
-    const sessions = data.sessions;
+  for (const [studentId, dateMap] of studentMap.entries()) {
+    for (const [date, data] of dateMap.entries()) {
+      const sessions = data.sessions;
 
-    // Sort sessions by start time to ensure chronological order
-    sessions.sort((a, b) => {
-      const startA = moment(a.NgayDaoTao, "DD/MM/YY HH:mm");
-      const startB = moment(b.NgayDaoTao, "DD/MM/YY HH:mm");
-      return startA - startB;
+      // Sort sessions by start time to ensure chronological order
+      sessions.sort((a, b) => {
+        const startA = moment(a.NgayDaoTao, "DD/MM/YY HH:mm");
+        const startB = moment(b.NgayDaoTao, "DD/MM/YY HH:mm");
+        return startA - startB;
+      });
+
+      // Check for breaks less than 15 minutes between sessions
+      for (let i = 0; i < sessions.length - 1; i++) {
+        const currentSession = sessions[i];
+        const nextSession = sessions[i + 1];
+
+        // Calculate time difference between sessions
+        const startCurrent = moment(
+          currentSession.NgayDaoTao,
+          "DD/MM/YY HH:mm"
+        );
+        const endCurrent = startCurrent
+          .clone()
+          .add(parseDuration(currentSession.ThoiGian), "minutes");
+        const startNext = moment(nextSession.NgayDaoTao, "DD/MM/YY HH:mm");
+
+        const breakTime = startNext.diff(endCurrent, "minutes");
+
+        // If the break time is less than 15 minutes, mark session with issue
+        if (breakTime < 15) {
+          const reason = "Nghỉ giữa phiên < 15 phút";
+
+          if (!currentSession.TrangThai) {
+            currentSession.TrangThai = true;
+            currentSession.LyDoLoai = reason;
+          } else if (!currentSession.LyDoLoai.includes(reason)) {
+            currentSession.LyDoLoai += `, ${reason}`;
+          }
+
+          if (!nextSession.TrangThai) {
+            nextSession.TrangThai = true;
+            nextSession.LyDoLoai = reason;
+          } else if (!nextSession.LyDoLoai.includes(reason)) {
+            nextSession.LyDoLoai += `, ${reason}`;
+          }
+
+          updates.push(currentSession);
+          updates.push(nextSession);
+        }
+      }
+    }
+  }
+
+  const teacherMap = new Map();
+
+  // Group sessions by teacher and date
+  sessions.forEach((session) => {
+    const teacher = session.HoTenGiaoVien;
+    const date = moment(session.NgayDaoTao, "DD/MM/YY").format("DD/MM/YY");
+    const startDateTime = moment(session.NgayDaoTao, "DD/MM/YY HH:mm");
+    const endDateTime = startDateTime
+      .clone()
+      .add(parseDuration(session.ThoiGian), "minutes");
+
+    if (!teacherMap.has(teacher)) {
+      teacherMap.set(teacher, new Map());
+    }
+
+    const dateMap = teacherMap.get(teacher);
+
+    if (!dateMap.has(date)) {
+      dateMap.set(date, []);
+    }
+
+    dateMap.get(date).push({
+      startDateTime,
+      endDateTime,
+      bienSoXe: session.XeTapLai,
+      session,
     });
-
-    // Check for breaks less than 15 minutes between sessions
-    for (let i = 0; i < sessions.length - 1; i++) {
-      const currentSession = sessions[i];
-      const nextSession = sessions[i + 1];
-
-      // Calculate time difference between sessions
-      const startCurrent = moment(currentSession.NgayDaoTao, "DD/MM/YY HH:mm");
-      const endCurrent = startCurrent.clone().add(parseDuration(currentSession.ThoiGian), 'minutes');
-      const startNext = moment(nextSession.NgayDaoTao, "DD/MM/YY HH:mm");
-
-      const breakTime = startNext.diff(endCurrent, 'minutes');
-
-      // If the break time is less than 15 minutes, mark session with issue
-      if (breakTime < 15) {
-        const reason = "Nghỉ giữa phiên < 15 phút";
-
-        if (!currentSession.TrangThai) {
-          currentSession.TrangThai = true;
-          currentSession.LyDoLoai = reason;
-        } else if (!currentSession.LyDoLoai.includes(reason)) {
-          currentSession.LyDoLoai += `, ${reason}`;
-        }
-        
-        if (!nextSession.TrangThai) {
-          nextSession.TrangThai = true;
-          nextSession.LyDoLoai = reason;
-        } else if (!nextSession.LyDoLoai.includes(reason)) {
-          nextSession.LyDoLoai += `, ${reason}`;
-        }
-
-        updates.push(currentSession);
-        updates.push(nextSession);
-      }
-    }
-  }
-}
-
-  // const teacherMap = new Map();
-
-  // // Group sessions by teacher and date
-  // sessions.forEach((session) => {
-  //   const teacher = session.HoTenGiaoVien;
-  //   const date = moment(session.NgayDaoTao, "DD/MM/YY").format("DD/MM/YY");
-  //   const startDateTime = moment(session.NgayDaoTao, "DD/MM/YY HH:mm");
-  //   const endDateTime = startDateTime.clone().add(parseDuration(session.ThoiGian), 'minutes');
-
-  //   if (!teacherMap.has(teacher)) {
-  //     teacherMap.set(teacher, new Map());
-  //   }
-
-  //   const dateMap = teacherMap.get(teacher);
-
-  //   if (!dateMap.has(date)) {
-  //     dateMap.set(date, []);
-  //   }
-
-  //   dateMap.get(date).push({
-  //     startDateTime,
-  //     endDateTime,
-  //     bienSoXe: session.XeTapLai,
-  //     session,
-  //   });
-  // });
-
-  // for (const [teacher, dateMap] of teacherMap.entries()) {
-  //   for (const [date, sessions] of dateMap.entries()) {
-  //     for (let i = 0; i < sessions.length; i++) {
-  //       for (let j = i + 1; j < sessions.length; j++) {
-  //         const session1 = sessions[i];
-  //         const session2 = sessions[j];
-
-  //         if (
-  //           session1.bienSoXe !== session2.bienSoXe &&
-  //           isOverlapping(
-  //             session1.startDateTime,
-  //             session1.endDateTime,
-  //             session2.startDateTime,
-  //             session2.endDateTime
-  //           )
-  //         ) {
-  //           const reason = "Giáo viên có phiên trùng lặp";
-
-  //           if (!session1.session.TrangThai) {
-  //             session1.session.TrangThai = true;
-  //             session1.session.LyDoLoai = reason;
-  //             updates.push(session1.session);
-  //           } else if (!session1.session.LyDoLoai.includes(reason)) {
-  //             session1.session.LyDoLoai += `, ${reason}`;
-  //             updates.push(session1.session);
-  //           }
-
-  //           if (!session2.session.TrangThai) {
-  //             session2.session.TrangThai = true;
-  //             session2.session.LyDoLoai = reason;
-  //             updates.push(session2.session);
-  //           } else if (!session2.session.LyDoLoai.includes(reason)) {
-  //             session2.session.LyDoLoai += `, ${reason}`;
-  //             updates.push(session2.session);
-  //           }
-  //         }
-  //       }
-  //     }
-  //   }
-  // }
-
-const teacherMap = new Map();
-
-// Group sessions by teacher and date
-sessions.forEach((session) => {
-  const teacher = session.HoTenGiaoVien;
-  const date = moment(session.NgayDaoTao, "DD/MM/YY").format("DD/MM/YY");
-  const startDateTime = moment(session.NgayDaoTao, "DD/MM/YY HH:mm");
-  const endDateTime = startDateTime.clone().add(parseDuration(session.ThoiGian), 'minutes');
-
-  if (!teacherMap.has(teacher)) {
-    teacherMap.set(teacher, new Map());
-  }
-
-  const dateMap = teacherMap.get(teacher);
-
-  if (!dateMap.has(date)) {
-    dateMap.set(date, []);
-  }
-
-  dateMap.get(date).push({
-    startDateTime,
-    endDateTime,
-    bienSoXe: session.XeTapLai,
-    session,
   });
-});
 
-for (const [teacher, dateMap] of teacherMap.entries()) {
-  for (const [date, sessions] of dateMap.entries()) {
-    for (let i = 0; i < sessions.length; i++) {
-      for (let j = i + 1; j < sessions.length; j++) {
-        const session1 = sessions[i];
-        const session2 = sessions[j];
+  for (const [teacher, dateMap] of teacherMap.entries()) {
+    for (const [date, sessions] of dateMap.entries()) {
+      for (let i = 0; i < sessions.length; i++) {
+        for (let j = i + 1; j < sessions.length; j++) {
+          const session1 = sessions[i];
+          const session2 = sessions[j];
 
-        if (
-          session1.bienSoXe !== session2.bienSoXe &&
-          isOverlapping(
-            session1.startDateTime,
-            session1.endDateTime,
-            session2.startDateTime,
-            session2.endDateTime
-          )
-        ) {
-          const student1 = session1.session;
-          const student2 = session2.session;
+          if (
+            session1.bienSoXe !== session2.bienSoXe &&
+            isOverlapping(
+              session1.startDateTime,
+              session1.endDateTime,
+              session2.startDateTime,
+              session2.endDateTime
+            )
+          ) {
+            const student1 = session1.session;
+            const student2 = session2.session;
 
-          const reason1 = `Giáo viên có phiên trùng lặp với học viên ${student2.HoTen} (Mã: ${student2.MaHocVien}, Khóa: ${student2.KhoaHoc})`;
-          const reason2 = `Giáo viên có phiên trùng lặp với học viên ${student1.HoTen} (Mã: ${student1.MaHocVien}, Khóa: ${student1.KhoaHoc})`;
+            const reason1 = `Giáo viên có phiên trùng lặp với học viên ${student2.HoTen} (Mã: ${student2.MaHocVien}, Khóa: ${student2.KhoaHoc})`;
+            const reason2 = `Giáo viên có phiên trùng lặp với học viên ${student1.HoTen} (Mã: ${student1.MaHocVien}, Khóa: ${student1.KhoaHoc})`;
 
-          if (!student1.TrangThai) {
-            student1.TrangThai = true;
-            student1.LyDoLoai = reason1;
-            updates.push(student1);
-          } else if (!student1.LyDoLoai.includes(reason1)) {
-            student1.LyDoLoai += `, ${reason1}`;
-            updates.push(student1);
-          }
+            if (!student1.TrangThai) {
+              student1.TrangThai = true;
+              student1.LyDoLoai = reason1;
+              updates.push(student1);
+            } else if (!student1.LyDoLoai.includes(reason1)) {
+              student1.LyDoLoai += `, ${reason1}`;
+              updates.push(student1);
+            }
 
-          if (!student2.TrangThai) {
-            student2.TrangThai = true;
-            student2.LyDoLoai = reason2;
-            updates.push(student2);
-          } else if (!student2.LyDoLoai.includes(reason2)) {
-            student2.LyDoLoai += `, ${reason2}`;
-            updates.push(student2);
+            if (!student2.TrangThai) {
+              student2.TrangThai = true;
+              student2.LyDoLoai = reason2;
+              updates.push(student2);
+            } else if (!student2.LyDoLoai.includes(reason2)) {
+              student2.LyDoLoai += `, ${reason2}`;
+              updates.push(student2);
+            }
           }
         }
       }
     }
   }
-}
 
   // Lưu vào cơ sở dữ liệu
   try {
@@ -705,7 +536,7 @@ for (const [teacher, dateMap] of teacherMap.entries()) {
         { $set: { TrangThai: update.TrangThai, LyDoLoai: update.LyDoLoai } }
       );
     }
-    res.sendStatus(200);
+    res.redirect("/computeData");
   } catch (err) {
     console.error("Error saving data:", err);
     res.status(500).send("Internal Server Error");
@@ -713,11 +544,19 @@ for (const [teacher, dateMap] of teacherMap.entries()) {
 });
 
 function isOverlapping(start1, end1, start2, end2) {
-  return (start1 < end2 && start2 < end1);
+  return start1 < end2 && start2 < end1;
 }
 
 router.post("/uploadxml", upload.single("file"), (req, res) => {
   const filePath = req.file.path;
+
+  const fileName = path.basename(
+    req.file.originalname,
+    path.extname(req.file.originalname)
+  );
+  const parts = fileName.split("_");
+  const maKhoaHoc = parts[3]; // Extract the full course code
+  const khoaHoc = maKhoaHoc.substring(maKhoaHoc.indexOf("K"));
 
   // Read and parse the XML file
   fs.readFile(filePath, "utf8", (err, data) => {
@@ -735,6 +574,8 @@ router.post("/uploadxml", upload.single("file"), (req, res) => {
         (lx) => ({
           STT: lx.SO_TT[0],
           "Mã Học Viên": lx.MA_DK[0],
+          "Khoá học": khoaHoc,
+          "Mã khoá học": maKhoaHoc,
           "Họ Tên": lx.HO_VA_TEN[0],
           "Ngày Sinh": formatDate(lx.NGAY_SINH[0]),
           "Giới Tính": formatGender(lx.GIOI_TINH[0]),
@@ -772,6 +613,7 @@ router.post("/save-data", (req, res) => {
 
     try {
       await newItem.save();
+      res.redirect("xml");
     } catch (err) {
       console.error("Error saving data:", err);
     }
@@ -785,6 +627,7 @@ router.get("/computeData", async (req, res) => {
     const dat_ss = await Dat_session.find({ TrangThai: false });
     const studentMap = new Map();
 
+    // Process sessions from dat_ss
     dat_ss.forEach((col) => {
       const studentId = col.MaHocVien;
 
@@ -799,7 +642,7 @@ router.get("/computeData", async (req, res) => {
           totalDuration: 0,
           totalDistance: 0,
           sessions: [],
-          KhoaHoc: new Set(), 
+          // KhoaHoc: new Set(),
           XeTapLai: new Set(),
           B1: new Set(),
           B2: new Set(),
@@ -823,7 +666,7 @@ router.get("/computeData", async (req, res) => {
         col.TotalMorningDistance + col.TotalEveningDistance;
 
       studentData.sessions.push(col);
-      studentData.KhoaHoc.add(col.KhoaHoc); 
+      // studentData.KhoaHoc.add(col.KhoaHoc);
       studentData.XeTapLai.add(col.XeTapLai);
     });
 
@@ -896,11 +739,11 @@ router.get("/computeData", async (req, res) => {
       for (let bienSoXe of xeTapLaiList) {
         const car = await Car.findOne({ BienSoXe: bienSoXe });
         if (car) {
-          if (car.LoaiHangXe === 'B11') {
+          if (car.LoaiHangXe === "B11") {
             data.B1.add(bienSoXe);
-          } else if (car.LoaiHangXe === 'B2') {
+          } else if (car.LoaiHangXe === "B2") {
             data.B2.add(bienSoXe);
-          } else if (car.LoaiHangXe === 'C') {
+          } else if (car.LoaiHangXe === "C") {
             data.C.add(bienSoXe);
           }
         }
@@ -909,7 +752,8 @@ router.get("/computeData", async (req, res) => {
       updatedStudents.push({
         MaHocVien: studentId,
         Anh: student ? student.Anh : "",
-        KhoaHoc: Array.from(data.KhoaHoc).join(", "),
+        KhoaHoc: student.KhoaHoc,
+        MaKhoaHoc: student.MaKhoaHoc,
         HoTen: student ? student.HoTen : "",
         NgaySinh: student ? student.NgaySinh : "",
         GioiTinh: student ? student.GioiTinh : "",
@@ -933,6 +777,53 @@ router.get("/computeData", async (req, res) => {
 
     await Total.create(updatedStudents);
 
+    const existingTotalStudents = await Total.find();
+    const existingTotalHoTenSet = new Set(
+      existingTotalStudents.map((student) => student.HoTen)
+    );
+    const students = await Student.find();
+
+    // Handle students with HoTen in Student model but not in dat_ss
+    for (const student of students) {
+      let category = "Unknown";
+
+      if (student.KhoaHoc.includes("B1")) {
+        category = "B1";
+      } else if (student.KhoaHoc.includes("B2")) {
+        category = "B2";
+      } else if (student.KhoaHoc.includes("C")) {
+        category = "C";
+      }
+
+      if (!existingTotalHoTenSet.has(student.HoTen)) {
+        const newTotal = new Total({
+          MaHocVien: student.MaHocVien,
+          Anh: student.Anh,
+          HoTen: student.HoTen,
+          SoCMT: student.SoCMT,
+          GioiTinh: student.GioiTinh,
+          NgaySinh: student.NgaySinh,
+          KhoaHoc: student.KhoaHoc,
+          MaKhoaHoc: student.MaKhoaHoc,
+          TongThoiGianXeSoTuDong: 0,
+          TongQuangDuongXeSoTuDong: "0",
+          TotalMorningTime: "0h00",
+          TotalEveningTime: "0h00",
+          TotalMorningDistance: "0.00",
+          TotalEveningDistance: "0.00",
+          TotalDuration: "0h00",
+          TotalDistance: "0.00",
+          Category: category,
+          TrangThai: true,
+          LyDo: "Chưa chạy chạy phiên",
+          B1: "",
+          B2: "",
+          C: "",
+        });
+        await newTotal.save();
+      }
+    }
+
     res.redirect("allTotal");
   } catch (err) {
     console.error("Error computing data:", err);
@@ -940,116 +831,132 @@ router.get("/computeData", async (req, res) => {
   }
 });
 
-router.post('/export-to-excel', (req, res) => {
+router.post("/export-to-excel", (req, res) => {
   const dataByKhoaHoc = req.body.dataByKhoaHoc;
 
   const wb = new excel.Workbook();
-  const ws = wb.addWorksheet('Sheet1');
+  const ws = wb.addWorksheet("Sheet1");
 
   // Define styles
   const headerStyle = wb.createStyle({
     font: {
-      name: 'Times New Roman',
+      name: "Times New Roman",
       bold: true,
       size: 16,
     },
     alignment: {
-      vertical: 'center',
-      horizontal: 'center',
+      vertical: "center",
+      horizontal: "center",
     },
     fill: {
-      type: 'pattern',
-      patternType: 'solid',
-      fgColor: '808080',
+      type: "pattern",
+      patternType: "solid",
+      fgColor: "808080",
     },
   });
 
   const titleStyle = wb.createStyle({
     font: {
-      name: 'Times New Roman',
+      name: "Times New Roman",
       bold: true,
       size: 16,
     },
     alignment: {
-      vertical: 'center',
-      horizontal: 'center',
+      vertical: "center",
+      horizontal: "center",
     },
   });
 
   const cellGreenStyle = wb.createStyle({
     font: {
-      name: 'Times New Roman',
+      name: "Times New Roman",
       size: 18,
-      color: 'cc3300',
+      color: "cc3300",
     },
     alignment: {
-      vertical: 'center',
-      horizontal: 'center',
+      vertical: "center",
+      horizontal: "center",
     },
     fill: {
-      type: 'pattern',
-      patternType: 'solid',
-      fgColor: '99cc00',
+      type: "pattern",
+      patternType: "solid",
+      fgColor: "99cc00",
     },
   });
 
   const cellNormalStyle = wb.createStyle({
     font: {
-      name: 'Times New Roman',
+      name: "Times New Roman",
       size: 12,
     },
     alignment: {
-      vertical: 'center',
-      horizontal: 'center',
+      vertical: "center",
+      horizontal: "center",
     },
   });
 
   const cellNameStudentStyle = wb.createStyle({
     font: {
-      name: 'Times New Roman',
+      name: "Times New Roman",
       size: 12,
     },
   });
 
   // Merge cells for the report title
-  ws.cell(1, 1, 1, 5, true).string('SỞ LĐTB&XH HẢI DƯƠNG').style(cellNormalStyle);
-  ws.cell(2, 1, 2, 5, true).string('TRUNG TÂM GDNN &SHLX  THANH MIỆN').style(cellNormalStyle);
-  ws.cell(1, 7, 1, 18, true).string('CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM').style(cellNormalStyle);
-  ws.cell(2, 7, 2, 18, true).string('Độc lập - Tự do - Hạnh phúc').style(cellNormalStyle);
-  ws.cell(4, 1, 4, 18, true).string('BÁO CÁO KẾT QUẢ ĐÀO TẠO THỰC HÀNH LÁI XE TRÊN ĐƯỜNG GIAO THÔNG THEO DANH SÁCH THÍ SINH DỰ TỐT NGHIỆP').style(titleStyle);
+  ws.cell(1, 1, 1, 5, true)
+    .string("SỞ LĐTB&XH HẢI DƯƠNG")
+    .style(cellNormalStyle);
+  ws.cell(2, 1, 2, 5, true)
+    .string("TRUNG TÂM GDNN &SHLX  THANH MIỆN")
+    .style(cellNormalStyle);
+  ws.cell(1, 7, 1, 18, true)
+    .string("CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM")
+    .style(cellNormalStyle);
+  ws.cell(2, 7, 2, 18, true)
+    .string("Độc lập - Tự do - Hạnh phúc")
+    .style(cellNormalStyle);
+  ws.cell(4, 1, 4, 18, true)
+    .string(
+      "BÁO CÁO KẾT QUẢ ĐÀO TẠO THỰC HÀNH LÁI XE TRÊN ĐƯỜNG GIAO THÔNG THEO DANH SÁCH THÍ SINH DỰ TỐT NGHIỆP"
+    )
+    .style(titleStyle);
 
   // Define headers with their respective widths
   const headers = [
-    { header: 'STT', width: 10 },
-    { header: 'Họ và tên học viên', width: 30 },
-    { header: 'Mã học viên', width: 30 },
-    { header: 'Ngày sinh', width: 15 },
-    { header: 'Số CCCD', width: 20 },
-    { header: 'Mã khoá học', width: 20 },
-    { header: 'Hạng', width: 10 },
-    { header: 'Thời gian đào tạo', width: 20 },
-    { header: 'Quãng đường đào tạo(km)', width: 35 },
-    { header: 'BIỂN SỐ XE', width: 20 },
-    { header: '', width: 20 },
-    { header: 'Kết quả', width: 10 },
+    { header: "STT", width: 10 },
+    { header: "Họ và tên học viên", width: 30 },
+    { header: "Mã học viên", width: 30 },
+    { header: "Ngày sinh", width: 15 },
+    { header: "Số CCCD", width: 20 },
+    { header: "Mã khoá học", width: 20 },
+    { header: "Hạng", width: 10 },
+    { header: "Thời gian đào tạo", width: 20 },
+    { header: "Quãng đường đào tạo(km)", width: 35 },
+    { header: "BIỂN SỐ XE", width: 20 },
+    { header: "", width: 20 },
+    { header: "Kết quả", width: 10 },
   ];
 
   // Set header row
   headers.forEach((header, index) => {
-    ws.cell(6, index + 1).string(header.header).style(headerStyle);
+    ws.cell(6, index + 1)
+      .string(header.header)
+      .style(headerStyle);
     ws.column(index + 1).setWidth(header.width);
   });
 
   // Function to determine the sorting order
   const getSortOrder = (khoaHoc) => {
-    if (khoaHoc.includes('B1')) return 1;
-    if (khoaHoc.includes('B2')) return 2;
-    if (khoaHoc.includes('C')) return 3;
+    if (khoaHoc.includes("B1")) return 1;
+    if (khoaHoc.includes("B2")) return 2;
+    if (khoaHoc.includes("C")) return 3;
     return 4; // fallback for any other categories
   };
 
   // Sort the keys based on the desired order
-  const sortedKeys = Object.keys(dataByKhoaHoc).sort((a, b) => getSortOrder(a) - getSortOrder(b));
+  const sortedKeys = Object.keys(dataByKhoaHoc).sort(
+    (a, b) => getSortOrder(a) - getSortOrder(b)
+  );
 
   let rowIndex = 7;
   let overallIndex = 1; // Initialize global STT counter
@@ -1067,13 +974,14 @@ router.post('/export-to-excel', (req, res) => {
     data.forEach((item) => {
       // Add global student order number (STT)
       ws.cell(rowIndex, 1).number(overallIndex).style(cellNormalStyle);
-      
+
       ws.cell(rowIndex, 2).string(item["Họ tên"]).style(cellNameStudentStyle);
       ws.cell(rowIndex, 3).string(item["Mã học viên"]).style(cellNormalStyle);
       ws.cell(rowIndex, 4).string(item["Ngày sinh"]).style(cellNormalStyle);
       ws.cell(rowIndex, 5).string(item["Số CCCD"]).style(cellNormalStyle);
+      ws.cell(rowIndex, 6).string(item["Mã khoá học"]).style(cellNormalStyle);
       ws.cell(rowIndex, 7).string(item["Hạng lái xe"]).style(cellNormalStyle);
-      
+
       // Assign vehicle license number based on license class
       if (item["Hạng lái xe"] === "B1") {
         ws.cell(rowIndex, 10).string(item["B1"]).style(cellNormalStyle);
@@ -1089,15 +997,19 @@ router.post('/export-to-excel', (req, res) => {
         ws.cell(rowIndex, 11).string("").style(cellNormalStyle);
       }
 
-      ws.cell(rowIndex, 8).string(item["Tổng thời gian"]).style(cellNormalStyle);
-      ws.cell(rowIndex, 9).string(item["Tổng quãng đường(km)"]).style(cellNormalStyle);
+      ws.cell(rowIndex, 8)
+        .string(item["Tổng thời gian"])
+        .style(cellNormalStyle);
+      ws.cell(rowIndex, 9)
+        .string(item["Tổng quãng đường(km)"])
+        .style(cellNormalStyle);
       ws.cell(rowIndex, 12).string(item["Kết quả"]).style(cellNormalStyle);
       rowIndex++;
       overallIndex++; // Increment global STT counter
     });
   });
 
-  const filename = req.body.filename || 'example.xlsx';
+  const filename = req.body.filename || "example.xlsx";
   wb.write(filename, res);
 });
 
@@ -1132,33 +1044,77 @@ router.get("/search/results", async (req, res) => {
   }
 });
 
-router.get("/reset", (req, res) => {
-  res.render("reset_confirmation", { title: "Xác nhận reset" });
+router.post("/deleteDate", async (req, res) => {
+  const { id } = req.body;
+  try {
+    await dateDAT.findByIdAndDelete(id);
+    res.redirect("dateDAT");
+  } catch (err) {
+    console.error("Error deleting date range:", err);
+    res.status(500).send("Error deleting date range");
+  }
 });
 
-// POST endpoint để xử lý reset
-router.post("/reset", async (req, res) => {
+router.get("/updateDate", async (req, res) => {
+  const { id } = req.query;
   try {
-    // Xóa dữ liệu trong các model Total và Dat_session
-    await Total.deleteMany({});
-    await Dat_session.deleteMany({});
+    const dateRange = await dateDAT.findById(id);
+    res.render("updateDate", { dateRange });
+  } catch (err) {
+    console.error("Error fetching date range:", err);
+    res.status(500).send("Error fetching date range");
+  }
+});
 
-    // Xóa tất cả các file trong thư mục /uploads
-    const uploadDir = path.join(__dirname, "..", "uploads");
-    fs.readdir(uploadDir, (err, files) => {
-      if (err) throw err;
+router.post("/submitDate", async (req, res) => {
+  const { KhoaHoc, startDate, endDate } = req.body;
 
-      for (const file of files) {
-        fs.unlink(path.join(uploadDir, file), (err) => {
-          if (err) throw err;
-        });
-      }
+  // Chuyển đổi ngày sang định dạng DD/MM/YY
+  const formatDate = (date) => {
+    const d = new Date(date);
+    let day = String(d.getDate()).padStart(2, "0");
+    let month = String(d.getMonth() + 1).padStart(2, "0");
+    let year = String(d.getFullYear()).slice(2);
+    return `${day}/${month}/${year}`;
+  };
+
+  const formattedStartDate = formatDate(startDate);
+  const formattedEndDate = formatDate(endDate);
+
+  const newCourse = new dateDAT({
+    KhoaHoc,
+    startDate: formattedStartDate,
+    endDate: formattedEndDate,
+  });
+  await newCourse.save();
+  res.redirect("/dateDAT");
+});
+
+router.post("/updateDate", async (req, res) => {
+  const { id, KhoaHoc, startDate, endDate } = req.body;
+
+  // Chuyển đổi ngày sang định dạng DD/MM/YY
+  const formatDate = (date) => {
+    const d = new Date(date);
+    let day = String(d.getDate()).padStart(2, "0");
+    let month = String(d.getMonth() + 1).padStart(2, "0");
+    let year = String(d.getFullYear()).slice(2);
+    return `${day}/${month}/${year}`;
+  };
+
+  const formattedStartDate = formatDate(startDate);
+  const formattedEndDate = formatDate(endDate);
+
+  try {
+    await dateDAT.findByIdAndUpdate(id, {
+      KhoaHoc,
+      startDate: formattedStartDate,
+      endDate: formattedEndDate,
     });
-
-    res.send("Reset thành công");
-  } catch (error) {
-    console.error("Lỗi khi thực hiện reset:", error);
-    res.status(500).send("Đã xảy ra lỗi khi thực hiện reset");
+    res.redirect("dateDAT");
+  } catch (err) {
+    console.error("Error updating date range:", err);
+    res.status(500).send("Error updating date range");
   }
 });
 
