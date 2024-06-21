@@ -27,7 +27,7 @@
         input[type="text"] {
             margin-left: 10px;
             margin-right: 10px;
-            width: 50%;
+            width: 20%;
             padding: 10px;
             border: 1px solid #ddd;
             border-radius: 5px;
@@ -68,18 +68,16 @@
         .toggle-btn {
             margin-bottom: 20px;
         }
-    </style>
-    <script>
-        function toggleList() {
-            const selectedValue = document.getElementById('trangthai').value;
-            document.getElementById('student_fail').style.display = selectedValue === 'fail' ? 'block' : 'none';
-            document.getElementById('student_pass').style.display = selectedValue === 'pass' ? 'block' : 'none';
+
+        a{
+            color:yellow
         }
-    </script>
+        
+    </style>
 </head>
 <body>
     <form action="/search/results" method="GET" style="display: flex;">
-        <label for="query">Nhập Họ tên, Mã học viên hoặc Số CCCD:</label>
+        <label style="margin-top: 10px;" for="query">Nhập Họ tên, Mã học viên hoặc Số CCCD:</label>
         <input type="text" id="query" name="query" placeholder="Nhập Họ tên, mã học viên, số CMT..." value="{{query}}">
         <button type="submit">Search</button>
     </form>
@@ -139,18 +137,24 @@
             </tbody>
         </table> 
     {{else}}
-    <div style="display: flex;">
-        <label for="trangthai">Chọn danh sách hiển thị:</label>
-        <select id="trangthai" name="trangthai" onchange="toggleList()">
-            <option value="fail" selected>Bảo lưu</option>
-            <option value="pass">Đạt</option>
-        </select>
-    </div>
-        
 
-        <div id="student_fail" style="display: block;">
-            <h2>Danh sách học viên bảo lưu: {{student_fail.length}}</h2>
-            <table>
+   <form action="/filter" method="get" id="filterForm">
+        <div style="display: flex;">
+            <label for="trangthai">Chọn danh sách hiển thị:</label>
+            <select id="trangthai" name="trangthai" onchange="document.getElementById('filterForm').submit();">
+                <option value="true" {{#if (eq trangthai 'true')}}selected{{/if}}>Bảo lưu</option>
+                <option value="false" {{#if (eq trangthai 'false')}}selected{{/if}}>Đạt</option>
+            </select>
+            <select id="khoahoc" name="khoahoc" onchange="document.getElementById('filterForm').submit();">
+                {{#each courses}}
+                    <option value="{{this.KhoaHoc}}" {{#if (eq this.KhoaHoc ../khoahoc)}}selected{{/if}}>{{this.KhoaHoc}}</option>
+                {{/each}}
+            </select>
+        </div> 
+    </form>
+
+        {{#if tt.length}}
+        <table>
                 <thead>
                     <tr>
                         <th>Mã học viên</th>
@@ -173,10 +177,13 @@
                         <th>Lý do</th>
                     </tr>
                 </thead>
-                <tbody>
-                    {{#each student_fail}}
+                <a>
+                    {{#each tt}}  
                         <tr>
-                            <td>{{ this.MaHocVien}}</td>
+                            <td>
+                                {{ this.MaHocVien}}
+                                <a href="/studentDetails/{{this.MaHocVien}}">Chi tiết</a>
+                            </td>
                             <td><img src="data:image/jpeg;base64,{{ this.Anh}}" alt="Ảnh"></td>
                             <td>{{this.HoTen}}</td>
                             <td>{{this.KhoaHoc}}</td>
@@ -201,62 +208,8 @@
                         </tr>
                     {{/each}}
                 </tbody>
-            </table>
-        </div>
-
-        <div id="student_pass" style="display: none;">
-            <h2>Danh sách học viên đạt: {{student_pass.length}}</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Mã học viên</th>
-                        <th>Ảnh</th>
-                        <th>Họ tên</th>
-                        <th>Khoá học</th>
-                        <th>Ngày sinh</th>
-                        <th>Giới tính</th>
-                        <th>Số CCCD</th>
-                        <th>Hạng</th>
-                        <th>Tổng thời gian B11</th>
-                        <th>Tổng quãng đường B11</th>
-                        <th>Tổng quãng đường sáng</th>
-                        <th>Tổng thời gian sáng</th>
-                        <th>Tổng quãng đường tối</th>
-                        <th>Tổng thời gian tối</th>
-                        <th>Tổng thời gian</th>
-                        <th>Tổng quãng đường</th>
-                        <th>Trạng thái</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {{#each student_pass}}
-                        <tr>
-                            <td>{{ this.MaHocVien}}</td>
-                            <td><img src="data:image/jpeg;base64,{{ this.Anh}}" alt="Ảnh"></td>
-                            <td>{{this.HoTen}}</td>
-                            <td>{{this.KhoaHoc}}</td>
-                            <td>{{this.NgaySinh}}</td>
-                            <td>{{this.GioiTinh}}</td>
-                            <td>{{this.SoCMT}}</td>
-                            <td>{{this.Category}}</td>
-                            <td>{{this.TongThoiGianXeSoTuDong}}</td>
-                            <td>{{this.TongQuangDuongXeSoTuDong}}</td>
-                            <td>{{this.TotalMorningDistance}}</td>
-                            <td>{{this.TotalMorningTime}}</td>
-                            <td>{{this.TotalEveningDistance}}</td>
-                            <td>{{this.TotalEveningTime}}</td>
-                            <td>{{this.TotalDuration}}</td>
-                            <td>{{this.TotalDistance}}</td>
-                            {{#if this.TrangThai}}
-                                <td style="color: red;">Bảo lưu</td>
-                            {{else}}
-                                <td>Đạt</td>
-                            {{/if}}
-                        </tr>
-                    {{/each}}
-                </tbody>
-            </table>
-        </div>
+            </table>  
+        {{/if}}
     {{/if}}
 
     {{#if sessions.length}}

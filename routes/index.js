@@ -19,17 +19,19 @@ router.get("/", function (req, res, next) {
 });
 
 router.get("/search", async function (req, res, next) {
-  const student_pass = await Total.find({ TrangThai: false });
-  const student_fail = await Total.find({ TrangThai: true });
+  // const student_pass = await Total.find({ TrangThai: false });
+  // const student_fail = await Total.find({ TrangThai: true });
+  const courses = await dateDAT.find({});
 
   res.render("search", {
     title: "Search",
     query: "",
     results: [],
     sessions: [],
-    student_pass,
-    student_fail,
-    displayList: "fail",
+    // student_pass,
+    // student_fail,
+    // displayList: "fail",
+    courses
   });
 });
 
@@ -953,10 +955,23 @@ router.post("/export-to-excel", (req, res) => {
     return 4; // fallback for any other categories
   };
 
+  // Function to extract the numerical part of the course identifier
+  const getNumericalPart = (khoaHoc) => {
+    const match = khoaHoc.match(/\d+$/);
+    return match ? parseInt(match[0], 10) : 0;
+  };
+
   // Sort the keys based on the desired order
-  const sortedKeys = Object.keys(dataByKhoaHoc).sort(
-    (a, b) => getSortOrder(a) - getSortOrder(b)
-  );
+  const sortedKeys = Object.keys(dataByKhoaHoc).sort((a, b) => {
+    const orderA = getSortOrder(a);
+    const orderB = getSortOrder(b);
+    if (orderA !== orderB) return orderA - orderB;
+
+    // If they have the same order, compare the rest of the strings numerically
+    const numA = getNumericalPart(a);
+    const numB = getNumericalPart(b);
+    return numA - numB;
+  });
 
   let rowIndex = 7;
   let overallIndex = 1; // Initialize global STT counter
@@ -1042,6 +1057,30 @@ router.get("/search/results", async (req, res) => {
     console.error("Error searching:", error);
     res.status(500).send("Internal Server Error");
   }
+});
+
+router.get("/studentDetails/:id", async (req, res)=>{
+    const id = req.params.id;
+    let sessions = [];
+    let results = [];
+
+    results = await Total.find({MaHocVien:id});
+
+    if (results.length > 0) {
+      const studentIds = results.map((result) => result.MaHocVien);
+      sessions = await Dat_session.find({ MaHocVien: { $in: studentIds } });
+    }
+
+    res.render("search", {results,sessions});
+});
+
+router.get("/filter", async (req,res)=>{
+  const { trangthai, khoahoc } = req.query;
+
+  const courses = await dateDAT.find({});
+  const tt = await Total.find({ TrangThai: trangthai, KhoaHoc: khoahoc });
+
+  res.render("search", { tt,courses, khoahoc, trangthai });
 });
 
 router.post("/deleteDate", async (req, res) => {
