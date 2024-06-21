@@ -12,7 +12,7 @@ var app = express();
 
 //db
 //mongodb://my-mongodb-container:27017/DAT_web
-var uri = "mongodb://localhost:27017/DAT_web";
+var uri = "mongodb://my-mongodb-container:27017/DAT_web";
 // var uri =
 //   "mongodb+srv://buiduccanh10:buiduccanh10@cluster0.rqr9q8a.mongodb.net/DAT_web";
 mongoose
@@ -34,6 +34,13 @@ var hbs = require("hbs");
 
 //'extractFilename'
 hbs.registerHelper("eq", function(v1, v2) {
+  return v1 === v2;
+});
+
+hbs.registerHelper('checkbox', function (v1, v2) {
+  if (Array.isArray(v2)) {
+      return v2.includes(v1);
+  }
   return v1 === v2;
 });
 

@@ -18,6 +18,7 @@
 
 .export-button {
     background-color: #34db85;
+    height: 50px;
     color: #fff;
     padding: 10px 20px;
     border: none;
@@ -37,6 +38,7 @@
 
 .pagination-btn {
     background-color: #3498db;
+    height: 50px;
     color: #fff;
     padding: 8px 12px;
     border: none;
@@ -101,18 +103,63 @@ table th, table td {
     100% { transform: rotate(360deg); }
 }
 
+.checkbox-container {
+    display: flex;
+    flex-wrap: wrap;
+    max-width: 100%;
+    gap: 10px;
+    height: 100px; /* Giới hạn chiều cao của container để chỉ có tối đa 2 hàng */
+    overflow: hidden;
+}
+
+.checkbox-item {
+    flex: 1 0 25%; /* Mỗi checkbox chiếm 25% chiều rộng container */
+    display: flex;
+    align-items: center;
+}
+
+.checkbox-item input {
+    margin-right: 5px;
+}
+
+@media (max-width: 600px) {
+    .checkbox-item {
+        flex: 1 0 48%; /* Trên các thiết bị nhỏ, mỗi checkbox chiếm 48% chiều rộng container */
+    }
+}
+
+
     </style>
 </head>
 <body>
-    {{#if total}}
     <div class="actions">
         <button class="export-button" onclick="exportToExcel()">Xuất Excel</button>
+
+        <form action="/allTotal" method="get" id="filterForm" class="checkbox-form">
+            <div class="checkbox-container">
+                {{#each kh}}
+                    <div class="checkbox-item">
+                        <input 
+                            type="checkbox" 
+                            id="khoahoc_{{@index}}" 
+                            name="khoahoc" 
+                            value="{{this.KhoaHoc}}" 
+                            onchange="document.getElementById('filterForm').submit();"
+                            {{#if (checkbox this.KhoaHoc ../selectedKhoaHoc)}}checked{{/if}}
+                        >
+                        <label for="khoahoc_{{@index}}">{{this.KhoaHoc}}</label>
+                    </div>
+                {{/each}}
+            </div>
+        </form>
+
         <div class="pagination">
             <button class="pagination-btn" onclick="previousPage()">Previous</button>
             <button class="pagination-btn" onclick="nextPage()">Next</button>
         </div>
     </div>
 
+    {{#if total}}
     <table border="1" id="dataTable">
         <thead>
             <tr>

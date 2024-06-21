@@ -6,10 +6,12 @@
     <title>Date DAT</title>
     <style>
 .container {
-    padding-left: 100px;
-    padding-right: 100px;
+    margin: 50px;
+    padding: 50px;
+    display: flex;
+    justify-content: space-around;
     border-radius: 10px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
 }
 
 h1, h2 {
@@ -50,9 +52,8 @@ button:hover {
 }
 
 table {
-    width: 100%;
+    width: 50%;
     border-collapse: collapse;
-    margin-top: 20px;
 }
 
 table, th, td {
@@ -73,12 +74,17 @@ th {
     display: flex;
     gap: 5px;
 }
+
+.formdate{
+    width: 20%;
+}
+
     </style>
 </head>
 <body>
+    <h1>Tạo lịch chạy DAT cho khoá học</h1>
     <div class="container">
-        <h1>Tạo lịch chạy DAT cho khoá học</h1>
-        <form action="/submitDate" method="post">
+        <form class="formdate" action="/submitDate" method="post">
             <div class="form-group">
                 <label for="KhoaHoc">Tên khoá học:</label>
                 <input type="text" id="KhoaHoc" name="KhoaHoc" required>
@@ -94,14 +100,13 @@ th {
             <button type="submit">Nhập</button>
         </form>
 
-        <h2>Danh sách</h2>
         <table>
             <thead>
                 <tr>
                     <th>Tên khoá</th>
                     <th>Ngày bắt đầu</th>
                     <th>Ngày kết thúc</th>
-                    <th style="width: 100px;">Actions</th>
+                    <th style="width: 100px;">Hành động</th>
                 </tr>
             </thead>
             <tbody>
@@ -113,11 +118,11 @@ th {
                     <td class="actions">
                         <form action="/updateDate" method="get" style="display:inline;">
                             <input type="hidden" name="id" value="{{this._id}}">
-                            <button type="submit">Update</button>
+                            <button type="submit">Sửa</button>
                         </form>
                         <form action="/deleteDate" method="post" style="display:inline;">
                             <input type="hidden" name="id" value="{{this._id}}">
-                            <button style="background-color: red;" type="submit">Delete</button>
+                            <button style="background-color: red;" type="submit">Xoá</button>
                         </form>
                     </td>
                 </tr>

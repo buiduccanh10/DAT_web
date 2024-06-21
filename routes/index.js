@@ -69,9 +69,19 @@ router.get("/allDat_session", async function (req, res, next) {
 });
 
 router.get("/allTotal", async function (req, res, next) {
+  const khoahocArray = req.query.khoahoc;
+
+  const kh = await dateDAT.find({});
   const total = await Total.find({});
 
-  res.render("total", { total });
+  if(khoahocArray){
+    const selectedKhoaHoc = Array.isArray(khoahocArray) ? khoahocArray : (khoahocArray ? [khoahocArray] : []);
+    const total = await Total.find({ KhoaHoc: { $in: selectedKhoaHoc } });
+  
+    res.render("total", { total, kh, selectedKhoaHoc });
+  }else{
+    res.render("total", { total, kh});
+  }
 });
 
 const storage = multer.diskStorage({
@@ -1098,7 +1108,12 @@ router.get("/updateDate", async (req, res) => {
   const { id } = req.query;
   try {
     const dateRange = await dateDAT.findById(id);
-    res.render("updateDate", { dateRange });
+    const data = await dateDAT.find({});
+
+    dateRange.startDate = convertToISODate(dateRange.startDate);
+    dateRange.endDate = convertToISODate(dateRange.endDate);
+
+    res.render("updateDate", { dateRange,data });
   } catch (err) {
     console.error("Error fetching date range:", err);
     res.status(500).send("Error fetching date range");
@@ -1156,6 +1171,11 @@ router.post("/updateDate", async (req, res) => {
     res.status(500).send("Error updating date range");
   }
 });
+
+function convertToISODate(dateStr) {
+  const [day, month, year] = dateStr.split('/');
+  return `20${year}-${month}-${day}`; // Giả sử năm là 20xx
+}
 
 function parseDuration(duration) {
   const [hours, minutes] = duration.split("h").map(Number);

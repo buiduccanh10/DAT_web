@@ -3,56 +3,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Update Date Range</title>
+    <title>Date DAT</title>
     <style>
-        .container {
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
+.container {
+    margin: 50px;
+    padding: 50px;
+    display: flex;
+    justify-content: space-around;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
 
-        h1 {
-            text-align: center;
-            margin-bottom: 20px;
-        }
+h1, h2 {
+    text-align: center;
+    margin-bottom: 20px;
+}
 
-        .form-group {
-            margin-bottom: 15px;
-        }
+.form-group {
+    margin-bottom: 15px;
+}
 
-        label {
-            display: block;
-            margin-bottom: 5px;
-        }
+label {
+    display: block;
+    margin-bottom: 5px;
+}
 
-        input[type="text"],
-        input[type="date"] {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-        }
+input[type="text"],
+input[type="date"] {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
 
-        button {
-            display: block;
-            width: 100%;
-            padding: 10px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
+button {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
 
-        button:hover {
-            background-color: #0056b3;
-        }
+button:hover {
+    background-color: #0056b3;
+}
+
+table {
+    width: 50%;
+    border-collapse: collapse;
+}
+
+table, th, td {
+    border: 1px solid #ccc;
+}
+
+th, td {
+    padding: 10px;
+    text-align: center;
+}
+
+th {
+    background-color: #007bff;
+    color: white;
+}
+
+.actions {
+    display: flex;
+    gap: 5px;
+}
+
+.formdate{
+    width: 20%;
+}
+
     </style>
 </head>
 <body>
+    <h1>Tạo lịch chạy DAT cho khoá học</h1>
     <div class="container">
-        <h1>Update Date Range</h1>
-        <form action="/updateDate" method="post">
+        <form class="formdate" action="/updateDate" method="post">
             <input type="hidden" name="id" value="{{dateRange._id}}">
             <div class="form-group">
                 <label for="KhoaHoc">Tên khoá học:</label>
@@ -68,6 +100,38 @@
             </div>
             <button type="submit">Cập nhật</button>
         </form>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Tên khoá</th>
+                    <th>Ngày bắt đầu</th>
+                    <th>Ngày kết thúc</th>
+                    <th style="width: 100px;">Hành động</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{#each data}}
+                <tr>
+                    <td>{{this.KhoaHoc}}</td>
+                    <td>{{this.startDate}}</td>
+                    <td>{{this.endDate}}</td>
+                    <td class="actions">
+                        <form action="/updateDate" method="get" style="display:inline;">
+                            <input type="hidden" name="id" value="{{this._id}}">
+                            <button type="submit">Sửa</button>
+                        </form>
+                        <form action="/deleteDate" method="post" style="display:inline;">
+                            <input type="hidden" name="id" value="{{this._id}}">
+                            <button style="background-color: red;" type="submit">Xoá</button>
+                        </form>
+                    </td>
+                </tr>
+                {{/each}}
+            </tbody>
+        </table>
     </div>
 </body>
 </html>
+
+
