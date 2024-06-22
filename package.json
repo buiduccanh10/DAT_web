@@ -18,6 +18,7 @@
     "morgan": "~1.9.1",
     "multer": "^1.4.5-lts.1",
     "nodemon": "^3.1.2",
+    "startbootstrap-sb-admin": "^7.0.7",
     "xlsx": "^0.18.5",
     "xml2js": "^0.6.2"
   }

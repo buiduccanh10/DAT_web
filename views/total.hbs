@@ -1,138 +1,70 @@
-<!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-    <link rel="stylesheet" href="styles.css">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no"
+    />
+    <meta name="description" content="" />
+    <meta name="author" content="" />
+    <title>BC Tổng hợp</title>
     <style>
         body {
-    font-family: Arial, sans-serif;
-}
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+        }
 
-.actions {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 20px;
-}
+        .actions {
+            margin-left: 20px;
+            margin-right: 20px;
+            margin-top: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
 
-.export-button {
-    background-color: #34db85;
-    height: 50px;
-    color: #fff;
-    padding: 10px 20px;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: background-color 0.3s;
-}
+        .export-button {
+            padding: 10px 20px;
+            background-color: #0fa85c;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
 
-.export-button:hover {
-    background-color: #2980b9;
-}
+        .export-button:hover {
+            background-color: #065326;
+        }
 
-.pagination {
-    display: flex;
-    gap: 10px;
-}
+        .checkbox-container {
+            display: flex;
+            flex-wrap: wrap;
+        }
 
-.pagination-btn {
-    background-color: #3498db;
-    height: 50px;
-    color: #fff;
-    padding: 8px 12px;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: background-color 0.3s;
-}
+        .checkbox-item {
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
 
-.pagination-btn:hover {
-    background-color: #2980b9;
-}
+        .checkbox-item label {
+            margin-left: 5px;
+        }
 
-table {
-    width: 100%;
-    border-collapse: collapse;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
+        /* Optional: Style the checkboxes */
+        .checkbox-item input[type="checkbox"] {
+            margin-right: 5px;
+        }
 
-table th, table td {
-    padding: 8px;
-    text-align: left;
-    border-bottom: 1px solid #ddd;
-}
-
-
-
-.image {
-    height: 130px;
-    width: 100px;
-    object-fit: cover;
-}
-
-.status {
-    color: red;
-}
-
-.spinner-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-    display: none;
-}
-
-.spinner {
-    border: 16px solid #f3f3f3;
-    border-radius: 50%;
-    border-top: 16px solid #3498db;
-    width: 80px;
-    height: 80px;
-    animation: spin 1.5s linear infinite;
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-.checkbox-container {
-    display: flex;
-    flex-wrap: wrap;
-    max-width: 100%;
-    gap: 10px;
-    height: 100px; /* Giới hạn chiều cao của container để chỉ có tối đa 2 hàng */
-    overflow: hidden;
-}
-
-.checkbox-item {
-    flex: 1 0 25%; /* Mỗi checkbox chiếm 25% chiều rộng container */
-    display: flex;
-    align-items: center;
-}
-
-.checkbox-item input {
-    margin-right: 5px;
-}
-
-@media (max-width: 600px) {
-    .checkbox-item {
-        flex: 1 0 48%; /* Trên các thiết bị nhỏ, mỗi checkbox chiếm 48% chiều rộng container */
-    }
-}
-
-
+        .card {
+            margin: 20px;
+        }
     </style>
-</head>
-<body>
-    <div class="actions">
+  </head>
+  <body>
+     <div class="actions">
         <button class="export-button" onclick="exportToExcel()">Xuất Excel</button>
 
         <form action="/allTotal" method="get" id="filterForm" class="checkbox-form">
@@ -152,16 +84,10 @@ table th, table td {
                 {{/each}}
             </div>
         </form>
-
-        <div class="pagination">
-            <button class="pagination-btn" onclick="previousPage()">Previous</button>
-            <button class="pagination-btn" onclick="nextPage()">Next</button>
-        </div>
     </div>
 
-    {{#if total}}
-    <table border="1" id="dataTable">
-        <thead>
+<table id="hide" style="display:none;">
+          <thead>
             <tr>
                 <th>Ảnh</th>
                 <th>Mã học viên</th>
@@ -190,7 +116,7 @@ table th, table td {
         <tbody>
             {{#each total}}
             <tr>
-                <td><img src="data:image/jpeg;base64,{{ this.Anh}}" class="image" alt="Ảnh"></td>
+                <td><img src="data:image/jpeg;base64,{{ this.Anh}}" class="image" alt="Ảnh" style="height:130px;width:100px"></td>
                 <td>{{ this.MaHocVien}}</td>
                 <td>{{ this.KhoaHoc}}</td>
                 <td>{{ this.HoTen}}</td>
@@ -219,23 +145,83 @@ table th, table td {
             </tr>
             {{/each}}
         </tbody>
-    </table>
+</table>
 
-    <div class="pagination">
-            <button class="pagination-btn" onclick="previousPage()">Previous</button>
-            <button class="pagination-btn" onclick="nextPage()">Next</button>
+    <div class="card mb-4" style="margin:20px">
+      <div class="card-header">
+        <i class="fas fa-table me-1"></i>
+        Bảng Báo cáo tổng hợp
+      </div>
+      <div class="card-body">
+        <table id="datatablesSimple">
+          <thead>
+            <tr>
+                <th>Ảnh</th>
+                <th>Mã học viên</th>
+                <th>Khoá học</th>
+                <th>Họ tên</th>
+                <th>Ngày sinh</th>
+                <th>Giới tính</th>
+                <th>Số CCCD</th>
+                <th>Hạng lái xe</th>
+                <th>Tổng thời gian B11</th>
+                <th>Tổng quãng đường B11</th>
+                <th>Tổng thời gian sáng</th>
+                <th>Tổng thời gian tối</th>
+                <th>Tổng quãng đường sáng</th>
+                <th>Tổng quãng đường tối</th>
+                <th>Tổng thời gian</th>
+                <th>Tổng quãng đường</th>
+                <th>Trạng thái</th>
+                <th>Lý do</th>
+                <th hidden>B1</th>
+                <th hidden>B2</th>
+                <th hidden>C</th>
+                <th hidden>MaKhoaHoc</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{#each total}}
+            <tr>
+                <td><img src="data:image/jpeg;base64,{{ this.Anh}}" class="image" alt="Ảnh" style="height:130px;width:100px"></td>
+                <td>{{ this.MaHocVien}}</td>
+                <td>{{ this.KhoaHoc}}</td>
+                <td>{{ this.HoTen}}</td>
+                <td>{{ this.NgaySinh}}</td>
+                <td>{{ this.GioiTinh}}</td>
+                <td>{{ this.SoCMT}}</td>
+                <td>{{ this.Category}}</td>
+                <td>{{ this.TongThoiGianXeSoTuDong}}</td>
+                <td>{{ this.TongQuangDuongXeSoTuDong}}</td>
+                <td>{{ this.TotalMorningTime}}</td>
+                <td>{{ this.TotalEveningTime}}</td>
+                <td>{{ this.TotalMorningDistance}}</td>
+                <td>{{ this.TotalEveningDistance}}</td>
+                <td>{{ this.TotalDuration}}</td>
+                <td>{{ this.TotalDistance}}</td>
+                {{#if this.TrangThai}}
+                <td class="status">Bảo lưu</td>
+                {{else}}
+                <td>Đạt</td>
+                {{/if}}
+                <td>{{ this.LyDo}}</td>
+                <td hidden>{{ this.B1}}</td>
+                <td hidden>{{ this.B2}}</td>
+                <td hidden>{{ this.C}}</td>
+                <td hidden>{{ this.MaKhoaHoc}}</td>
+            </tr>
+            {{/each}}
+        </tbody>
+        </table>
+      </div>
+
     </div>
-    {{/if}}
-    <div class="spinner-overlay" id="spinnerOverlay">
-        <div class="spinner"></div>
-    </div>
-</body>
+  </body>
 </html>
-
 
 <script>
 async function exportToExcel() {
-            const table = document.getElementById("dataTable");
+            const table = document.getElementById("hide");
             const rows = Array.from(table.rows);
 
             // Group and organize data
@@ -306,58 +292,4 @@ async function exportToExcel() {
                 }
             }
         }
-
-        const table = document.getElementById('dataTable');
-        const pagination = document.getElementById('pagination');
-        const prevBtn = document.getElementById('prevBtn');
-        const nextBtn = document.getElementById('nextBtn');
-
-        const rowsPerPage = 50;
-        const rowCount = table.rows.length - 1; // Excluding the header row
-
-        let totalPages = Math.ceil(rowCount / rowsPerPage);
-        if (totalPages === 0) totalPages = 1;
-
-        let currentPage = 1;
-
-        function showPage(pageNumber) {
-            currentPage = pageNumber;
-            const startIndex = (pageNumber - 1) * rowsPerPage + 1;
-            const endIndex = pageNumber * rowsPerPage;
-
-            for (let i = 1; i <= rowCount; i++) {
-                if (i >= startIndex && i <= endIndex) {
-                    table.rows[i].style.display = '';
-                } else {
-                    table.rows[i].style.display = 'none';
-                }
-            }
-
-            updatePaginationButtons();
-        }
-
-        function previousPage() {
-            if (currentPage > 1) {
-                showPage(currentPage - 1);
-            }
-        }
-
-        function nextPage() {
-            if (currentPage < totalPages) {
-                showPage(currentPage + 1);
-            }
-        }
-
-        function updatePaginationButtons() {
-            prevBtn.disabled = currentPage === 1;
-            nextBtn.disabled = currentPage === totalPages;
-        }
-
-        // Generate page numbers
-        const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
-
-        console.log(pages)
-
-        // Show the first page by default
-        showPage(1);
     </script>

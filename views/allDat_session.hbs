@@ -1,153 +1,66 @@
-<!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Data Table with Pagination and Spinner</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            padding: 20px;
-        }
-
-        
-
-        .table-container {
-            position: relative;
-            margin-bottom: 20px;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        table, th, td {
-            border: 1px solid #ddd;
-        }
-
-        th,td{
-            padding: 10px;
-            text-align: left;
-        }
-
-        .pagination-container {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 10px;
-        }
-
-        
-
-    </style>
-</head>
-<body>
-    <div class="table-container">
-        <table id="dataTable">
-            <thead>
-                <tr>
-                    <th>STT</th>
-                    <th>Mã Phiên</th>
-                    <th>Tỉ lệ</th>
-                    <th>Khóa học</th>
-                    <th>Mã học viên</th>
-                    <th>Họ tên</th>
-                    <th>Họ tên giáo viên</th>
-                    <th>Xe tập lái</th>
-                    <th>Ngày đào tạo</th>
-                    <th>Thời gian</th>
-                    <th>Quãng đường</th>
-                    <th>Trạng thái</th>
-                    <th>Lý do</th>
-                </tr>
-            </thead>
-            <tbody>
-                {{#each dat_ss}}
-                    <tr>
-                        <td>{{ this.STT}}</td>
-                        <td>{{ this.MaPhien}}</td>
-                        <td>{{ this.TiLe}}</td>
-                        <td>{{ this.KhoaHoc}}</td>
-                        <td>{{ this.MaHocVien}}</td>
-                        <td>{{ this.HoTen}}</td>
-                        <td>{{ this.HoTenGiaoVien}}</td>
-                        <td>{{ this.XeTapLai}}</td>
-                        <td>{{ this.NgayDaoTao}}</td>
-                        <td>{{ this.ThoiGian}}</td>
-                        <td>{{ this.QuangDuong}}</td>
-                        {{#if this.TrangThai}}
-                            <td style="color: red;">Bảo lưu</td>
-                        {{else}}
-                            <td></td>
-                        {{/if}}
-                        <td>{{ this.LyDoLoai}}</td>
-                    </tr>
-                {{/each}}
-            </tbody>
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no"
+    />
+    <meta name="description" content="" />
+    <meta name="author" content="" />
+    <title>Tổng hợp phiên học</title>
+  </head>
+  <body>
+    <div class="card mb-4" style="margin:20px">
+      <div class="card-header">
+        <i class="fas fa-table me-1"></i>
+        Bảng tổng hợp phiên học
+      </div>
+      <div class="card-body">
+        <table id="datatablesSimple">
+          <thead>
+            <tr>
+              <th>STT</th>
+              <th>Mã Phiên</th>
+              <th>Tỉ lệ</th>
+              <th>Khóa học</th>
+              <th>Mã học viên</th>
+              <th>Họ tên</th>
+              <th>Họ tên giáo viên</th>
+              <th>Xe tập lái</th>
+              <th>Ngày đào tạo</th>
+              <th>Thời gian</th>
+              <th>Quãng đường</th>
+              <th>Trạng thái</th>
+              <th>Lý do</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{#each dat_ss}}
+              <tr>
+                <td>{{this.STT}}</td>
+                <td>{{this.MaPhien}}</td>
+                <td>{{this.TiLe}}</td>
+                <td>{{this.KhoaHoc}}</td>
+                <td>{{this.MaHocVien}}</td>
+                <td>{{this.HoTen}}</td>
+                <td>{{this.HoTenGiaoVien}}</td>
+                <td>{{this.XeTapLai}}</td>
+                <td>{{this.NgayDaoTao}}</td>
+                <td>{{this.ThoiGian}}</td>
+                <td>{{this.QuangDuong}}</td>
+                {{#if this.TrangThai}}
+                  <td>Bảo lưu</td>
+                {{else}}
+                  <td>Đạt</td>
+                {{/if}}
+                <td>{{this.LyDoLoai}}</td>
+              </tr>
+            {{/each}}
+          </tbody>
         </table>
+      </div>
+
     </div>
-
-    <div class="pagination-container">
-        <button id="prevBtn" class="pagination-button" onclick="previousPage()" disabled>Previous</button>
-        <div id="pagination"></div>
-        <button id="nextBtn" class="pagination-button" onclick="nextPage()">Next</button>
-    </div>
-
-    <script>
-        const computeDataForm = document.getElementById('computeDataForm');
-
-        const table = document.getElementById('dataTable').getElementsByTagName('tbody')[0];
-        const rows = Array.from(table.rows);
-        const rowsPerPage = 50;
-        const totalPages = Math.ceil(rows.length / rowsPerPage);
-        let currentPage = 1;
-
-        function showPage(pageNumber) {
-            currentPage = pageNumber;
-            const startIndex = (pageNumber - 1) * rowsPerPage;
-            const endIndex = startIndex + rowsPerPage;
-
-            rows.forEach((row, index) => {
-                row.style.display = (index >= startIndex && index < endIndex) ? '' : 'none';
-            });
-
-            updatePagination();
-        }
-
-        function previousPage() {
-            if (currentPage > 1) {
-                showPage(currentPage - 1);
-            }
-        }
-
-        function nextPage() {
-            if (currentPage < totalPages) {
-                showPage(currentPage + 1);
-            }
-        }
-
-        function updatePagination() {
-            document.getElementById('prevBtn').disabled = (currentPage === 1);
-            document.getElementById('nextBtn').disabled = (currentPage === totalPages);
-
-            const paginationContainer = document.getElementById('pagination');
-            paginationContainer.innerHTML = '';
-
-            for (let i = 1; i <= totalPages; i++) {
-                const pageButton = document.createElement('button');
-                pageButton.className = 'pagination-button';
-                pageButton.innerText = i;
-                pageButton.onclick = () => showPage(i);
-                if (i === currentPage) {
-                    pageButton.disabled = true;
-                }
-                paginationContainer.appendChild(pageButton);
-            }
-        }
-
-        // Initialize the table by showing the first page
-        showPage(1);
-    </script>
-</body>
+  </body>
 </html>

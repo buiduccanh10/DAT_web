@@ -18,23 +18,6 @@ router.get("/", function (req, res, next) {
   res.render("index", { layout: "layout" });
 });
 
-router.get("/search", async function (req, res, next) {
-  // const student_pass = await Total.find({ TrangThai: false });
-  // const student_fail = await Total.find({ TrangThai: true });
-  const courses = await dateDAT.find({});
-
-  res.render("search", {
-    title: "Search",
-    query: "",
-    results: [],
-    sessions: [],
-    // student_pass,
-    // student_fail,
-    // displayList: "fail",
-    courses
-  });
-});
-
 router.get("/dateDAT", async function (req, res, next) {
   const data = await dateDAT.find({});
   res.render("dateDAT", { data });
@@ -847,7 +830,7 @@ router.post("/export-to-excel", (req, res) => {
   const dataByKhoaHoc = req.body.dataByKhoaHoc;
 
   const wb = new excel.Workbook();
-  const ws = wb.addWorksheet("Sheet1");
+  const ws = wb.addWorksheet("DAT");
 
   // Define styles
   const headerStyle = wb.createStyle({
@@ -915,23 +898,24 @@ router.post("/export-to-excel", (req, res) => {
   });
 
   // Merge cells for the report title
-  ws.cell(1, 1, 1, 5, true)
-    .string("SỞ LĐTB&XH HẢI DƯƠNG")
-    .style(cellNormalStyle);
-  ws.cell(2, 1, 2, 5, true)
-    .string("TRUNG TÂM GDNN &SHLX  THANH MIỆN")
-    .style(cellNormalStyle);
-  ws.cell(1, 7, 1, 18, true)
-    .string("CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM")
-    .style(cellNormalStyle);
-  ws.cell(2, 7, 2, 18, true)
-    .string("Độc lập - Tự do - Hạnh phúc")
-    .style(cellNormalStyle);
-  ws.cell(4, 1, 4, 18, true)
-    .string(
-      "BÁO CÁO KẾT QUẢ ĐÀO TẠO THỰC HÀNH LÁI XE TRÊN ĐƯỜNG GIAO THÔNG THEO DANH SÁCH THÍ SINH DỰ TỐT NGHIỆP"
-    )
-    .style(titleStyle);
+ws.cell(1, 1, 1, 5, true)
+.string("SỞ LĐTB&XH HẢI DƯƠNG")
+.style(cellNormalStyle);
+ws.cell(2, 1, 2, 5, true)
+.string("TRUNG TÂM GDNN &SHLX  THANH MIỆN")
+.style(cellNormalStyle);
+ws.cell(1, 7, 1, 13, true)
+.string("CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM")
+.style(cellNormalStyle);
+ws.cell(2, 7, 2, 13, true)
+.string("Độc lập - Tự do - Hạnh phúc")
+.style(cellNormalStyle);
+
+// Adjusted position for the main title
+ws.cell(4, 1, 4, 12, true)
+.string("BÁO CÁO KẾT QUẢ ĐÀO TẠO THỰC HÀNH LÁI XE TRÊN ĐƯỜNG GIAO THÔNG THEO DANH SÁCH THÍ SINH DỰ TỐT NGHIỆP")
+.style(titleStyle);
+
 
   // Define headers with their respective widths
   const headers = [
@@ -951,10 +935,19 @@ router.post("/export-to-excel", (req, res) => {
 
   // Set header row
   headers.forEach((header, index) => {
-    ws.cell(6, index + 1)
+    const cell = ws.cell(6, index + 1)
       .string(header.header)
       .style(headerStyle);
-    ws.column(index + 1).setWidth(header.width);
+
+    if (header.header === "BIỂN SỐ XE") {
+      // Merge BIỂN SỐ XE with the empty header
+      ws.cell(6, index + 1, 6, index + 2, true)
+        .string(header.header)
+        .style(headerStyle);
+      ws.column(index + 1).setWidth(header.width);
+    } else {
+      ws.column(index + 1).setWidth(header.width);
+    }
   });
 
   // Function to determine the sorting order
@@ -1036,6 +1029,18 @@ router.post("/export-to-excel", (req, res) => {
 
   const filename = req.body.filename || "example.xlsx";
   wb.write(filename, res);
+});
+
+router.get("/search", async function (req, res, next) {
+  const courses = await dateDAT.find({});
+
+  res.render("search", {
+    title: "Search",
+    query: "",
+    results: [],
+    sessions: [],
+    courses
+  });
 });
 
 router.get("/search/results", async (req, res) => {
