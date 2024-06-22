@@ -38,13 +38,12 @@ input[type="date"] {
 
 button {
     display: block;
-    width: 100%;
     padding: 10px;
     background-color: #007bff;
     color: white;
     border: none;
     border-radius: 5px;
-    cursor: pointer;
+    {{!-- cursor: pointer; --}}
 }
 
 button:hover {
@@ -97,7 +96,7 @@ th {
                 <label for="endDate">Ngày kết thúc:</label>
                 <input type="date" id="endDate" name="endDate" required>
             </div>
-            <button type="submit">Nhập</button>
+            <button type="submit" style="width:100%">Nhập</button>
         </form>
 
         <table>
