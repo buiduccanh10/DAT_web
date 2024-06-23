@@ -38,36 +38,15 @@ input[type="date"] {
 
 button {
     display: block;
-    width: 100%;
     padding: 10px;
     background-color: #007bff;
     color: white;
     border: none;
     border-radius: 5px;
-    cursor: pointer;
 }
 
 button:hover {
     background-color: #0056b3;
-}
-
-table {
-    width: 50%;
-    border-collapse: collapse;
-}
-
-table, th, td {
-    border: 1px solid #ccc;
-}
-
-th, td {
-    padding: 10px;
-    text-align: center;
-}
-
-th {
-    background-color: #007bff;
-    color: white;
 }
 
 .actions {
@@ -82,8 +61,8 @@ th {
     </style>
 </head>
 <body>
-    <h1>Tạo lịch chạy DAT cho khoá học</h1>
     <div class="container">
+        
         <form class="formdate" action="/updateDate" method="post">
             <input type="hidden" name="id" value="{{dateRange._id}}">
             <div class="form-group">
@@ -98,16 +77,22 @@ th {
                 <label for="endDate">Ngày kết thúc:</label>
                 <input type="date" id="endDate" name="endDate" value="{{dateRange.endDate}}" required>
             </div>
-            <button type="submit">Cập nhật</button>
+            <button type="submit" style="width: 100%;">Cập nhật</button>
         </form>
 
-        <table>
+            <div class="card mb-4" style="margin:20px">
+      <div class="card-header">
+        <i class="fas fa-table me-1"></i>
+        Bảng lịch chạy DAT
+      </div>
+      <div class="card-body">
+        <table id="datatablesSimple">
             <thead>
                 <tr>
                     <th>Tên khoá</th>
                     <th>Ngày bắt đầu</th>
                     <th>Ngày kết thúc</th>
-                    <th style="width: 100px;">Hành động</th>
+                    <th>Hành động</th>
                 </tr>
             </thead>
             <tbody>
@@ -130,8 +115,9 @@ th {
                 {{/each}}
             </tbody>
         </table>
+      </div>
+
+    </div>
     </div>
 </body>
 </html>
-
-

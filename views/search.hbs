@@ -123,7 +123,10 @@
                 {{#if tt.length}}
                 <div class="card mt-4">
                     <div class="card-header">
-                        Bảng tổng hợp phiên học
+                        Có {{tt.length}} học viên trong khoá {{khoahoc}} 
+                        {{#if (eq trangthai 'true')}} bảo lưu 
+                        {{else}} đạt 
+                        {{/if}}
                     </div>
                     <div class="card-body">
                         <div class="table-responsive">

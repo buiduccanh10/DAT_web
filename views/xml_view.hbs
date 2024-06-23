@@ -1,84 +1,141 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+
 <head>
     <title>Upload XML File</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <style>
-         .button-container {
+        .button-container {
             margin-bottom: 20px;
             display: flex;
-            justify-content: space-between;
-        }
-        .pagination-button {
-            padding: 8px 12px;
-            background-color: #3498db;
-            border: 1px solid #2980b9;
-            color: #fff;
-            cursor: pointer;
-            transition: background-color 0.2s;
+            justify-content: flex-end;
         }
 
-        .pagination-button:disabled {
-            background-color: #bdc3c7;
-            cursor: not-allowed;
+        .spinner-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            display: none;
+        }
+
+        .spinner {
+            border: 16px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 16px solid #3498db;
+            width: 80px;
+            height: 80px;
+            animation: spin 1.5s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .table-container {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
         }
     </style>
 </head>
-<body>
-    <h1>Tải lên file XML danh sách học viên</h1>
-    <form action="/uploadxml" method="post" enctype="multipart/form-data">
-        <input type="file" name="file" required/>
-        <button type="submit">Tải lên</button>
-    </form>
-    {{#if data}}
-    <h2>XML Data:</h2>
-    <div class="button-container">
-                <button id="saveButton" class="pagination-button">Lưu</button>
-    </div>
-    <table border="1" id="data-table">
-        <thead>
-            <tr>
-                <th>STT</th>
-                <th>Mã Học Viên</th>
-                <th>Khoá học</th>
-                <th>Mã khoá học</th>
-                <th>Họ Tên</th>
-                <th>Ngày Sinh</th>
-                <th>Giới Tính</th>
-                <th>Số CMT</th>
-                <th>Ngày Cấp CMT</th>
-                <th>Nơi Cấp CMT</th>
-                <th>Ngày Nhận Hồ Sơ</th>
-                <th>Số GPLX</th>
-                <th>Hạng GPLX</th>
-                <th>Nơi Cấp GPLX</th>
-                <th>Ảnh</th>
-            </tr>
-        </thead>
-        <tbody>
-            {{#each data}}
-            <tr>
-                <td>{{this.STT}}</td>
-                <td>{{lookup this "Mã Học Viên"}}</td>
-                <td>{{lookup this "Khoá học"}}</td>
-                <td>{{lookup this "Mã khoá học"}}</td>
-                <td>{{lookup this "Họ Tên"}}</td>
-                <td>{{lookup this "Ngày Sinh"}}</td>
-                <td>{{lookup this "Giới Tính"}}</td>
-                <td>{{lookup this "Số CMT"}}</td>
-                <td>{{lookup this "Ngày Cấp CMT"}}</td>
-                <td>{{lookup this "Nơi Cấp CMT"}}</td>
-                <td>{{lookup this "Ngày Nhận Hồ Sơ"}}</td>
-                <td>{{lookup this "Số GPLX"}}</td>
-                <td>{{lookup this "Hạng GPLX"}}</td>
-                <td>{{lookup this "Nơi Cấp GPLX"}}</td>
-                <td><img src="data:image/jpeg;base64,{{lookup this "Ảnh"}}" style="height: 130px; width:100px;" alt="Ảnh"></td>
-            </tr>
-            {{/each}}
-        </tbody>
-    </table>
-    {{/if}}
 
+<body>
+    <div class="container mt-4">
+        <h1 class="mb-4">Tải lên file XML danh sách học viên</h1>
+        <form action="/uploadxml" method="post" enctype="multipart/form-data" class="mb-4">
+            <div class="form-group">
+                <input type="file" name="file" class="form-control-file" required />
+            </div>
+            <button type="submit" class="btn btn-primary">Tải lên</button>
+        </form>
+
+        {{#if data}}
+        <h2>XML Data:</h2>
+        <div class="button-container">
+            <button id="saveButton" class="btn btn-success">Lưu</button>
+        </div>
+        <div class="table-container">
+            <table class="table table-bordered table-striped" id="data-table">
+                <thead>
+                    <tr>
+                        <th>STT</th>
+                        <th>Mã Học Viên</th>
+                        <th>Khoá học</th>
+                        <th>Mã khoá học</th>
+                        <th>Họ Tên</th>
+                        <th>Ngày Sinh</th>
+                        <th>Giới Tính</th>
+                        <th>Số CMT</th>
+                        <th>Ngày Cấp CMT</th>
+                        <th>Nơi Cấp CMT</th>
+                        <th>Ngày Nhận Hồ Sơ</th>
+                        <th>Số GPLX</th>
+                        <th>Hạng GPLX</th>
+                        <th>Nơi Cấp GPLX</th>
+                        <th>Ảnh</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{#each data}}
+                    <tr>
+                        <td>{{this.STT}}</td>
+                        <td>{{lookup this "Mã Học Viên"}}</td>
+                        <td>{{lookup this "Khoá học"}}</td>
+                        <td>{{lookup this "Mã khoá học"}}</td>
+                        <td>{{lookup this "Họ Tên"}}</td>
+                        <td>{{lookup this "Ngày Sinh"}}</td>
+                        <td>{{lookup this "Giới Tính"}}</td>
+                        <td>{{lookup this "Số CMT"}}</td>
+                        <td>{{lookup this "Ngày Cấp CMT"}}</td>
+                        <td>{{lookup this "Nơi Cấp CMT"}}</td>
+                        <td>{{lookup this "Ngày Nhận Hồ Sơ"}}</td>
+                        <td>{{lookup this "Số GPLX"}}</td>
+                        <td>{{lookup this "Hạng GPLX"}}</td>
+                        <td>{{lookup this "Nơi Cấp GPLX"}}</td>
+                        <td><img src="data:image/jpeg;base64,{{lookup this "Ảnh"}}" class="img-thumbnail" alt="Ảnh"></td>
+                    </tr>
+                    {{/each}}
+                </tbody>
+            </table>
+        </div>
+        <div class="pagination">
+            <button id="prevPage" class="btn btn-primary mr-2">Trang trước</button>
+            <button id="nextPage" class="btn btn-primary">Trang tiếp</button>
+        </div>
+        {{/if}}
+
+        <!-- Spinner Overlay -->
+        <div class="spinner-overlay" id="spinnerOverlay">
+            <div class="spinner"></div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script>
+        const spinnerOverlay = document.getElementById('spinnerOverlay');
+
+        document.querySelector('form').addEventListener('submit', function () {
+            spinnerOverlay.style.display = 'flex';
+        });
+
         document.getElementById('saveButton').addEventListener('click', function () {
             const rows = document.querySelectorAll('#data-table tbody tr');
             const data = [];
@@ -87,8 +144,8 @@
                 const rowData = {
                     STT: row.cells[0].textContent,
                     MaHocVien: row.cells[1].textContent,
-                    KhoaHoc:row.cells[2].textContent,
-                    MaKhoaHoc:row.cells[3].textContent,
+                    KhoaHoc: row.cells[2].textContent,
+                    MaKhoaHoc: row.cells[3].textContent,
                     HoTen: row.cells[4].textContent,
                     NgaySinh: row.cells[5].textContent,
                     GioiTinh: row.cells[6].textContent,
@@ -104,6 +161,8 @@
                 data.push(rowData);
             });
 
+            spinnerOverlay.style.display = 'flex';
+
             fetch('/save-data', {
                 method: 'POST',
                 headers: {
@@ -111,6 +170,7 @@
                 },
                 body: JSON.stringify(data)
             }).then(response => {
+                spinnerOverlay.style.display = 'none';
                 if (response.ok) {
                     alert('Data saved successfully!');
                 } else {
@@ -118,10 +178,45 @@
                 }
             }).catch(error => {
                 console.error('Error:', error);
+                spinnerOverlay.style.display = 'none';
                 alert('Error saving data.');
             });
         });
+
+        // Pagination logic
+        const rowsPerPage = 10;
+        let currentPage = 1;
+        const rows = document.querySelectorAll('#data-table tbody tr');
+        const totalRows = rows.length;
+
+        function displayRows(page) {
+            const start = (page - 1) * rowsPerPage;
+            const end = page * rowsPerPage;
+
+            rows.forEach((row, index) => {
+                row.style.display = (index >= start && index < end) ? '' : 'none';
+            });
+
+            document.getElementById('prevPage').disabled = page === 1;
+            document.getElementById('nextPage').disabled = end >= totalRows;
+        }
+
+        document.getElementById('prevPage').addEventListener('click', function () {
+            if (currentPage > 1) {
+                currentPage--;
+                displayRows(currentPage);
+            }
+        });
+
+        document.getElementById('nextPage').addEventListener('click', function () {
+            if ((currentPage * rowsPerPage) < totalRows) {
+                currentPage++;
+                displayRows(currentPage);
+            }
+        });
+
+        displayRows(currentPage);
     </script>
 </body>
-</html>
 
+</html>

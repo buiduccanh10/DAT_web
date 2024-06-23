@@ -18,6 +18,10 @@ router.get("/", function (req, res, next) {
   res.render("index", { layout: "layout" });
 });
 
+router.get("/dashboard", function (req, res, next) {
+  res.render("dashBoard", { layout: "layout" });
+});
+
 router.get("/dateDAT", async function (req, res, next) {
   const data = await dateDAT.find({});
   res.render("dateDAT", { data });
