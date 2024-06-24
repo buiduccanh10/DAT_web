@@ -91,8 +91,8 @@ router.post("/upload", upload.single("file"), (req, res) => {
   let data = xlsx.utils.sheet_to_json(sheet);
 
   data = data.map((row) => {
-    if (row["Ngày đào tạo"] instanceof Date) {
-      row["Ngày đào tạo"] = moment(row["Ngày đào tạo"]).format(
+    if (row["Login time"] instanceof Date) {
+      row["Login time"] = moment(row["Login time"]).format(
         "DD/MM/YY HH:mm"
       );
     }
