@@ -597,29 +597,36 @@ router.post("/uploadxml", upload.single("file"), (req, res) => {
   });
 });
 
-router.post("/save-data", (req, res) => {
+router.post("/save-data", async (req, res) => {
   const data = req.body;
 
   if (!data || data.length === 0) {
     return res.status(400).send("No data to save");
   }
 
-  data.forEach(async (item) => {
-    const newItem = new Student({
-      _id: item["MaHocVien"],
-      ...item,
-    });
+  try {
+    for (const item of data) {
+      const existingStudent = await Student.findById(item["MaHocVien"]);
 
-    try {
+      if (existingStudent) {
+        await Student.findByIdAndDelete(item["MaHocVien"]);
+      }
+
+      const newItem = new Student({
+        _id: item["MaHocVien"],
+        ...item,
+      });
+
       await newItem.save();
-      res.redirect("xml");
-    } catch (err) {
-      console.error("Error saving data:", err);
     }
-  });
 
-  res.sendStatus(200);
+    res.redirect("/xml");
+  } catch (err) {
+    console.error("Error saving data:", err);
+    res.status(500).send("Error saving data");
+  }
 });
+
 
 router.get("/computeData", async (req, res) => {
   try {
