@@ -91,10 +91,12 @@ router.post("/upload", upload.single("file"), (req, res) => {
   let data = xlsx.utils.sheet_to_json(sheet);
 
   data = data.map((row) => {
-    if (row["Login time"] instanceof Date) {
-      row["Login time"] = moment(row["Login time"]).format(
+    if (row["Thời gian bắt đầu phiên học"] instanceof Date) {
+      row["Thời gian bắt đầu phiên học"] = moment(row["Thời gian bắt đầu phiên học"]).format(
         "DD/MM/YY HH:mm"
       );
+
+      row["Thời gian thực hành (giờ) (CSĐT truyền lên)"] = formatInputTime(row["Thời gian thực hành (giờ) (CSĐT truyền lên)"])
     }
     return row;
   });
@@ -546,55 +548,68 @@ function isOverlapping(start1, end1, start2, end2) {
   return start1 < end2 && start2 < end1;
 }
 
-router.post("/uploadxml", upload.single("file"), (req, res) => {
-  const filePath = req.file.path;
+router.post("/uploadxml", upload.array('files', 15), (req, res) => {
+  let dataFromAllFiles = [];
 
-  const fileName = path.basename(
-    req.file.originalname,
-    path.extname(req.file.originalname)
-  );
-  const parts = fileName.split("_");
-  const maKhoaHoc = parts[3]; // Extract the full course code
-  const khoaHoc = maKhoaHoc.substring(maKhoaHoc.indexOf("K"));
+  const filePromises = req.files.map((file, index) => {
+      return new Promise((resolve, reject) => {
+          const filePath = file.path;
 
-  // Read and parse the XML file
-  fs.readFile(filePath, "utf8", (err, data) => {
-    if (err) {
-      return res.status(500).send("Error reading file");
-    }
+          const fileName = path.basename(
+              file.originalname,
+              path.extname(file.originalname)
+          );
+          const parts = fileName.split("_");
+          const maKhoaHoc = parts[3]; // Extract the full course code
+          const khoaHoc = maKhoaHoc.substring(maKhoaHoc.indexOf("K"));
 
-    xml2js.parseString(data, (err, result) => {
-      if (err) {
-        return res.status(500).send("Error parsing XML");
-      }
+          // Read and parse the XML file
+          fs.readFile(filePath, "utf8", (err, data) => {
+              if (err) {
+                  return reject("Error reading file");
+              }
 
-      // Assuming the XML structure, convert it to a usable format
-      const dataFromXml = result.BAO_CAO1.DATA[0].NGUOI_LXS[0].NGUOI_LX.map(
-        (lx) => ({
-          STT: lx.SO_TT[0],
-          "Mã Học Viên": lx.MA_DK[0],
-          "Khoá học": khoaHoc,
-          "Mã khoá học": maKhoaHoc,
-          "Họ Tên": lx.HO_VA_TEN[0],
-          "Ngày Sinh": formatDate(lx.NGAY_SINH[0]),
-          "Giới Tính": formatGender(lx.GIOI_TINH[0]),
-          "Số CMT": lx.SO_CMT[0],
-          "Ngày Cấp CMT": lx.NGAY_CAP_CMT[0],
-          "Nơi Cấp CMT": lx.NOI_CAP_CMT[0],
-          "Ngày Nhận Hồ Sơ": lx.HO_SO[0].NGAY_NHAN_HOSO[0],
-          "Số GPLX": lx.SO_GPLX_DA_CO ? lx.SO_GPLX_DA_CO[0] : "",
-          "Hạng GPLX": lx.HANG_GPLX_DA_CO ? lx.HANG_GPLX_DA_CO[0] : "",
-          "Nơi Cấp GPLX": lx.DV_CAP_GPLX_DACO ? lx.DV_CAP_GPLX_DACO[0] : "",
-          Ảnh: lx.HO_SO[0].ANH_CHAN_DUNG[0], // Assuming this field contains the URL of the image
-        })
-      );
+              xml2js.parseString(data, (err, result) => {
+                  if (err) {
+                      return reject("Error parsing XML");
+                  }
 
-      // console.log(dataFromXml);
+                  // Assuming the XML structure, convert it to a usable format
+                  const dataFromXml = result.BAO_CAO1.DATA[0].NGUOI_LXS[0].NGUOI_LX.map(
+                      (lx) => ({
+                          STT: lx.SO_TT[0],
+                          MaHocVien: lx.MA_DK[0],
+                          KhoaHoc: khoaHoc,
+                          MaKhoaHoc: maKhoaHoc,
+                          HoTen: lx.HO_VA_TEN[0],
+                          NgaySinh: formatDate(lx.NGAY_SINH[0]),
+                          GioiTinh: formatGender(lx.GIOI_TINH[0]),
+                          SoCMT: lx.SO_CMT[0],
+                          NgayCapCMT: lx.NGAY_CAP_CMT[0],
+                          NoiCapCMT: lx.NOI_CAP_CMT[0],
+                          NgayNhanHoSo: lx.HO_SO[0].NGAY_NHAN_HOSO[0],
+                          SoGPLX: lx.SO_GPLX_DA_CO ? lx.SO_GPLX_DA_CO[0] : "",
+                          HangGPLX: lx.HANG_GPLX_DA_CO ? lx.HANG_GPLX_DA_CO[0] : "",
+                          NoiCapGPLX: lx.DV_CAP_GPLX_DACO ? lx.DV_CAP_GPLX_DACO[0] : "",
+                          Anh: lx.HO_SO[0].ANH_CHAN_DUNG[0], // Assuming this field contains the URL of the image
+                      })
+                  );
 
-      // Render the data in a table
-      res.render("xml_view", { data: dataFromXml });
-    });
+                  dataFromAllFiles = dataFromAllFiles.concat(dataFromXml);
+                  resolve();
+              });
+          });
+      });
   });
+
+  Promise.all(filePromises)
+      .then(() => {
+          // Render the data in a table
+          res.render('xml_view', { data: dataFromAllFiles });
+      })
+      .catch((err) => {
+          res.status(500).send(err);
+      });
 });
 
 router.post("/save-data", async (req, res) => {
@@ -627,11 +642,11 @@ router.post("/save-data", async (req, res) => {
   }
 });
 
-
 router.get("/computeData", async (req, res) => {
   try {
     const dat_ss = await Dat_session.find({ TrangThai: false });
     const studentMap = new Map();
+    const missingStudents = [];
 
     // Process sessions from dat_ss
     dat_ss.forEach((col) => {
@@ -680,6 +695,12 @@ router.get("/computeData", async (req, res) => {
 
     for (const [studentId, data] of studentMap.entries()) {
       const student = await Student.findById(studentId);
+
+      if (!student) {
+        missingStudents.push(studentId); // Add missing student ID to the array
+        continue; // Skip processing if student is not found
+      }
+
 
       const studentSessions = data.sessions;
       let category = "Unknown";
@@ -829,7 +850,7 @@ router.get("/computeData", async (req, res) => {
         await newTotal.save();
       }
     }
-
+    //res.json({ success: true, missingStudents });
     res.redirect("allTotal");
   } catch (err) {
     console.error("Error computing data:", err);
@@ -1203,6 +1224,14 @@ function formatTime(minutes) {
   const mins = minutes % 60;
   return `${hours}h${mins < 10 ? "0" : ""}${mins}`;
 }
+
+function formatInputTime(decimalHours) {
+  const totalMinutes = Math.round(decimalHours * 60);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return `${hours}h${minutes}`;
+}
+
 
 function formatDate(dateString) {
   // Chuyển đổi từ 'YYYYMMDD' sang 'YYYY-MM-DD'

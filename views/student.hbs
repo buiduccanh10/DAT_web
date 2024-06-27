@@ -6,11 +6,17 @@
     <title>Document</title>
 </head>
 <body>
-    <table border="1" id="data-table">
+    <div class="card mb-4" style="margin:20px">
+      <div class="card-header">
+        <i class="fas fa-table me-1"></i>
+        Danh sách học viên
+      </div>
+      <div class="card-body">
+        <table id="datatablesSimple">
         <thead>
             <tr>
-                <th>STT</th>
                 <th>Mã Học Viên</th>
+                <th>Khoá học</th>
                 <th>Họ Tên</th>
                 <th>Ngày Sinh</th>
                 <th>Giới Tính</th>
@@ -27,8 +33,8 @@
         <tbody>
             {{#each student}}
             <tr>
-                <td>{{this.STT}}</td>
                 <td>{{ this.MaHocVien}}</td>
+                <td>{{this.KhoaHoc}}</td>
                 <td>{{ this.HoTen}}</td>
                 <td>{{ this.NgaySinh}}</td>
                 <td>{{ this.GioiTinh}}</td>
@@ -43,6 +49,10 @@
             </tr>
             {{/each}}
         </tbody>
-    </table>
+        </table>
+      </div>
+
+    </div>
+    
 </body>
 </html>

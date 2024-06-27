@@ -15,16 +15,6 @@
             line-height: 1.6;
         }
 
-        .actions {
-            margin-left: 20px;
-            margin-right: 20px;
-            margin-top: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 20px;
-        }
-
         .export-button {
             padding: 10px 20px;
             background-color: #0fa85c;
@@ -58,34 +48,31 @@
             margin-right: 5px;
         }
 
+        .checkbox-form{
+            margin-bottom: 10px;
+        }
+
+        .filter-button {
+            padding: 10px 20px;
+            background-color: rgb(29, 127, 218);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .filter-button:hover {
+            background-color: rgb(0, 105, 217);
+        }
+
         .card {
             margin: 20px;
         }
     </style>
   </head>
   <body>
-     <div class="actions">
-        <button class="export-button" onclick="exportToExcel()">Xuất Excel</button>
-
-        <form action="/allTotal" method="get" id="filterForm" class="checkbox-form">
-            <div class="checkbox-container">
-                {{#each kh}}
-                    <div class="checkbox-item">
-                        <input 
-                            type="checkbox" 
-                            id="khoahoc_{{@index}}" 
-                            name="khoahoc" 
-                            value="{{this.KhoaHoc}}" 
-                            onchange="document.getElementById('filterForm').submit();"
-                            {{#if (checkbox this.KhoaHoc ../selectedKhoaHoc)}}checked{{/if}}
-                        >
-                        <label for="khoahoc_{{@index}}">{{this.KhoaHoc}}</label>
-                    </div>
-                {{/each}}
-            </div>
-        </form>
-    </div>
-
+     
 <table id="hide" style="display:none;">
           <thead>
             <tr>
@@ -148,11 +135,39 @@
 </table>
 
     <div class="card mb-4" style="margin:20px">
-      <div class="card-header">
-        <i class="fas fa-table me-1"></i>
-        Bảng Báo cáo tổng hợp
+      <div class="card-header" style="display: inline-flex; justify-content:space-between;">
+        <div>
+            <i class="fas fa-table me-1"></i>
+            Bảng Báo cáo tổng hợp
+        </div>
+        <div>
+            <button class="filter-button" onclick="toggleFilter()" style="margin-right: 10px;"><i class="fas fa-filter"></i></button>
+            <button class="export-button" onclick="exportToExcel()">
+                <i class="fa-solid fa-file-excel"></i>
+                Xuất Excel
+            </button>
+        </div>
       </div>
       <div class="card-body">
+
+        <form action="/allTotal" method="get" id="filterForm" class="checkbox-form" style="display: none;">
+            <div class="checkbox-container">
+                {{#each kh}}
+                    <div class="checkbox-item">
+                        <input 
+                            type="checkbox" 
+                            id="khoahoc_{{@index}}" 
+                            name="khoahoc" 
+                            value="{{this.KhoaHoc}}" 
+                            onchange="document.getElementById('filterForm').submit();"
+                            {{#if (checkbox this.KhoaHoc ../selectedKhoaHoc)}}checked{{/if}}
+                        >
+                        <label for="khoahoc_{{@index}}">{{this.KhoaHoc}}</label>
+                    </div>
+                {{/each}}
+            </div>
+        </form>
+
         <table id="datatablesSimple">
           <thead>
             <tr>
@@ -220,6 +235,11 @@
 </html>
 
 <script>
+function toggleFilter() {
+  const filterForm = document.getElementById('filterForm');
+  filterForm.style.display = filterForm.style.display === 'block' ? 'none' : 'block';
+}
+
 async function exportToExcel() {
             const table = document.getElementById("hide");
             const rows = Array.from(table.rows);

@@ -62,7 +62,7 @@
         <h1 class="mb-4">Tải lên file XML danh sách học viên</h1>
         <form action="/uploadxml" method="post" enctype="multipart/form-data" class="mb-4">
             <div class="form-group">
-                <input type="file" name="file" class="form-control-file" required />
+                <input type="file" name="files" class="form-control-file" multiple required />
             </div>
             <button type="submit" class="btn btn-primary">Tải lên</button>
         </form>
@@ -96,21 +96,21 @@
                 <tbody>
                     {{#each data}}
                     <tr>
-                        <td>{{this.STT}}</td>
-                        <td>{{lookup this "Mã Học Viên"}}</td>
-                        <td>{{lookup this "Khoá học"}}</td>
-                        <td>{{lookup this "Mã khoá học"}}</td>
-                        <td>{{lookup this "Họ Tên"}}</td>
-                        <td>{{lookup this "Ngày Sinh"}}</td>
-                        <td>{{lookup this "Giới Tính"}}</td>
-                        <td>{{lookup this "Số CMT"}}</td>
-                        <td>{{lookup this "Ngày Cấp CMT"}}</td>
-                        <td>{{lookup this "Nơi Cấp CMT"}}</td>
-                        <td>{{lookup this "Ngày Nhận Hồ Sơ"}}</td>
-                        <td>{{lookup this "Số GPLX"}}</td>
-                        <td>{{lookup this "Hạng GPLX"}}</td>
-                        <td>{{lookup this "Nơi Cấp GPLX"}}</td>
-                        <td><img src="data:image/jpeg;base64,{{lookup this "Ảnh"}}" class="img-thumbnail" alt="Ảnh"></td>
+                        <td>{{STT}}</td>
+                        <td>{{MaHocVien}}</td>
+                        <td>{{KhoaHoc}}</td>
+                        <td>{{MaKhoaHoc}}</td>
+                        <td>{{HoTen}}</td>
+                        <td>{{NgaySinh}}</td>
+                        <td>{{GioiTinh}}</td>
+                        <td>{{SoCMT}}</td>
+                        <td>{{NgayCapCMT}}</td>
+                        <td>{{NoiCapCMT}}</td>
+                        <td>{{NgayNhanHoSo}}</td>
+                        <td>{{SoGPLX}}</td>
+                        <td>{{HangGPLX}}</td>
+                        <td>{{NoiCapGPLX}}</td>
+                        <td><img src="data:image/jpeg;base64,{{Anh}}" class="img-thumbnail" alt="Ảnh"></td>
                     </tr>
                     {{/each}}
                 </tbody>

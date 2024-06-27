@@ -95,15 +95,15 @@
                     <tr>
                         <td>{{lookup this 'STT'}}</td>
                         <td>{{lookup this 'Mã Phiên'}}</td>
-                        <td>{{lookup this 'Tỉ lệ'}}</td>
-                        <td>{{lookup this 'Khóa học'}}</td>
+                        <td>{{lookup this 'Tỉ lệ nhận diện'}}</td>
+                        <td>{{lookup this 'Tên Khóa học'}}</td>
                         <td>{{lookup this 'Mã học viên'}}</td>
-                        <td>{{lookup this 'Họ tên'}}</td>
-                        <td>{{lookup this 'Họ tên giáo viên'}}</td>
-                        <td>{{lookup this 'Xe tập lái'}}</td>
-                        <td>{{lookup this 'Login time'}}</td>
-                        <td>{{lookup this 'Thời gian'}}</td>
-                        <td>{{lookup this 'Quãng đường'}}</td>
+                        <td>{{lookup this 'Họ và tên học viên'}}</td>
+                        <td>{{lookup this 'Họ và tên giáo viên'}}</td>
+                        <td>{{lookup this 'Biển số Xe'}}</td>
+                        <td>{{lookup this 'Thời gian bắt đầu phiên học'}}</td>
+                        <td>{{lookup this 'Thời gian thực hành (giờ) (CSĐT truyền lên)'}}</td>
+                        <td>{{lookup this 'Quãng đường thực hành (km) (CSĐT truyền lên)'}}</td>
                     </tr>
                     {{/each}}
                 </tbody>
@@ -163,6 +163,7 @@
                 spinnerOverlay.style.display = 'none';
                 if (response.ok) {
                     alert('Data saved successfully!'); 
+                    window.location.href = '/allTotal';
                 } else {
                     alert('Error saving data.');
                 }
