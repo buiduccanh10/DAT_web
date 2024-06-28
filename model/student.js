@@ -1,7 +1,6 @@
 const mongoose = require("mongoose");
 
 const studentSchema = new mongoose.Schema({
-  _id: String,
   STT: String,
   MaHocVien: String,
   KhoaHoc:String,

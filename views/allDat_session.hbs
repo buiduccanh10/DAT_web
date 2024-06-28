@@ -12,9 +12,27 @@
   </head>
   <body>
     <div class="card mb-4" style="margin:20px">
-      <div class="card-header">
-        <i class="fas fa-table me-1"></i>
-        Bảng tổng hợp phiên học
+      <div class="card-header" style="display: flex; justify-content: space-between;">
+        <div>
+          <i class="fas fa-table me-1"></i>
+          Bảng tổng hợp phiên học
+          <form action="/save-dat-session" id="listdatss" method="get">
+          <label for="tenDanhSach">Chọn danh sách phiên học:</label>
+            <select id="tenDanhSach" name="tenDanhSach" onchange="document.getElementById('listdatss').submit();">
+                <option value="">Chọn...</option>
+                {{#each distinctTenDanhSach}}
+                    <option value="{{this}}" {{#if (eq this ../query)}}selected{{/if}}>{{this}}</option>
+                {{/each}}
+            </select>
+          </form>   
+        </div>
+        
+        {{#if query}}
+          <button type="button" class="btn btn-danger" id="deleteListSession">
+            <i class="fa-solid fa-trash-can"></i>
+            Xoá
+        </button>
+        {{/if}}
       </div>
       <div class="card-body">
         <table id="datatablesSimple">
@@ -62,5 +80,28 @@
       </div>
 
     </div>
+
+    <script>
+      document.getElementById("deleteListSession").addEventListener("click", function() {
+        if (confirm("Bạn có chắc chắn muốn xóa DS phiên học '{{query}}' này không?")) {
+          fetch(`/delete-dat-session?tenDanhSach={{query}}`, {
+            method: "DELETE",
+          })
+          .then(response => {
+            if (response.ok) {
+              alert("Đã xóa thành công!");
+               window.location.href = "/allDat_session";
+            } else {
+              alert("Xóa thất bại, vui lòng thử lại.");
+            }
+          })
+          .catch(error => {
+            console.error("Error:", error);
+            alert("Xóa thất bại, vui lòng thử lại.");
+          });
+        }
+      });
+    </script>
+
   </body>
 </html>

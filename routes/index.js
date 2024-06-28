@@ -8,6 +8,7 @@ const path = require("path");
 const fs = require("fs");
 const Student = require("../model/student");
 const Dat_session = require("../model/dat_session");
+const DAT = require("../model/DAT");
 const Total = require("../model/total");
 const Car = require("../model/car");
 const dateDAT = require("../model/dateDAT");
@@ -23,8 +24,10 @@ router.get("/dashboard", function (req, res, next) {
 });
 
 router.get("/dateDAT", async function (req, res, next) {
-  const data = await dateDAT.find({});
-  res.render("dateDAT", { data });
+  const datemain = await dateDAT.find({additional:true}).lean();
+  const datesecond = await dateDAT.find({additional:false}).lean();
+
+  res.render("dateDAT", { datemain, datesecond});
 });
 
 router.get("/xml", function (req, res, next) {
@@ -36,7 +39,7 @@ router.get("/car", function (req, res, next) {
 });
 
 router.get("/allStudent", async function (req, res, next) {
-  const student = await Student.find({});
+  const student = await Student.find({}).lean();
 
   student.sort((a, b) => {
     return parseInt(a.STT) - parseInt(b.STT);
@@ -46,29 +49,22 @@ router.get("/allStudent", async function (req, res, next) {
 });
 
 router.get("/allDat_session", async function (req, res, next) {
-  const dat_ss = await Dat_session.find({});
+  const distinctTenDanhSach = await DAT.distinct("TenDanhSachDAT").lean();
+  // const dat_ss = await Dat_session.find({TenDanhSachDAT:});
 
-  dat_ss.sort((a, b) => {
-    return parseInt(a.STT) - parseInt(b.STT);
-  });
-
-  res.render("allDat_session", { dat_ss });
+  res.render("allDat_session", { distinctTenDanhSach });
 });
 
 router.get("/allTotal", async function (req, res, next) {
-  const khoahocArray = req.query.khoahoc;
+  const distinctTenDanhSach = await DAT.distinct("TenDanhSachDAT").lean();
 
-  const kh = await dateDAT.find({});
-  const total = await Total.find({});
+  res.render("total", { distinctTenDanhSach });
+});
 
-  if(khoahocArray){
-    const selectedKhoaHoc = Array.isArray(khoahocArray) ? khoahocArray : (khoahocArray ? [khoahocArray] : []);
-    const total = await Total.find({ KhoaHoc: { $in: selectedKhoaHoc } });
-  
-    res.render("total", { total, kh, selectedKhoaHoc });
-  }else{
-    res.render("total", { total, kh});
-  }
+router.get("/allTotal", async function (req, res, next) {
+  const distinctTenDanhSach = await DAT.distinct("TenDanhSachDAT").lean();
+
+  res.render("total", { distinctTenDanhSach });
 });
 
 const storage = multer.diskStorage({
@@ -92,11 +88,13 @@ router.post("/upload", upload.single("file"), (req, res) => {
 
   data = data.map((row) => {
     if (row["Thời gian bắt đầu phiên học"] instanceof Date) {
-      row["Thời gian bắt đầu phiên học"] = moment(row["Thời gian bắt đầu phiên học"]).format(
-        "DD/MM/YY HH:mm"
-      );
+      row["Thời gian bắt đầu phiên học"] = moment(
+        row["Thời gian bắt đầu phiên học"]
+      ).format("DD/MM/YY HH:mm");
 
-      row["Thời gian thực hành (giờ) (CSĐT truyền lên)"] = formatInputTime(row["Thời gian thực hành (giờ) (CSĐT truyền lên)"])
+      row["Thời gian thực hành (giờ) (CSĐT truyền lên)"] = formatInputTime(
+        row["Thời gian thực hành (giờ) (CSĐT truyền lên)"]
+      );
     }
     return row;
   });
@@ -135,30 +133,52 @@ router.post("/save-car", async (req, res) => {
   }
 });
 
-router.post("/save-dat-session", async (req, res) => {
-  const ss_check = await Dat_session.find({});
-  const tt_check = await Total.find({});
+router.post("/save-dat", async (req, res) => {
+  const data = req.body;
 
-  if (ss_check.length > 0 || tt_check.length > 0) {
-    await Total.deleteMany({});
-    await Dat_session.deleteMany({});
+  try {
+    for (const row of data) {
+      const dat = new DAT({
+        STT: row.STT,
+        MaPhien: row.MaPhien,
+        TiLe: row.TiLe,
+        KhoaHoc: row.KhoaHoc,
+        MaHocVien: row.MaHocVien,
+        HoTen: row.HoTen,
+        HoTenGiaoVien: row.HoTenGiaoVien,
+        XeTapLai: row.XeTapLai,
+        NgayDaoTao: row.NgayDaoTao,
+        ThoiGian: row.ThoiGian,
+        QuangDuong: row.QuangDuong,
+        TenDanhSachDAT: row.TenDanhSachDAT,
+      });
 
-    // Xóa tất cả các file trong thư mục /uploads
-    const uploadDir = path.join(__dirname, "..", "uploads");
-    fs.readdir(uploadDir, (err, files) => {
-      if (err) throw err;
+      await dat.save();
+    }
 
-      for (const file of files) {
-        fs.unlink(path.join(uploadDir, file), (err) => {
-          if (err) throw err;
-        });
-      }
-    });
+    res.status(200).send("Data saved successfully!");
+  } catch (err) {
+    console.error("Error saving data:", err);
+    res.status(500).send("Error saving data.");
+  }
+});
+
+router.get("/save-dat-session", async (req, res) => {
+  const query = req.query.tenDanhSach;
+
+  const data = await DAT.find({ TenDanhSachDAT: query }).lean();
+
+  if (data) {
+    for (const item of data) {
+      await Dat_session.findOneAndDelete({
+        MaHocVien: item.MaHocVien,
+        TenDanhSachDAT: query,
+      });
+    }
   }
 
-  const data = req.body;
   const cars = await Car.find({ LoaiHangXe: "B11" });
-  const dateDATs = await dateDAT.find({});
+  const dateDATs = await dateDAT.find({}).lean();
 
   if (!data || data.length === 0) {
     return res.status(400).send("No data to save");
@@ -220,26 +240,45 @@ router.post("/save-dat-session", async (req, res) => {
     // Tạo một mảng để lưu trữ các lý do
     const lyDoLoaiList = [];
 
-    //
-    const matchingDateDAT = dateDATs.find(
+    //dat out range date
+    const matchingDateDATs = dateDATs.filter(
       (dateDAT) => dateDAT.KhoaHoc === item.KhoaHoc
     );
-
-    if (matchingDateDAT) {
+    
+    if (matchingDateDATs.length > 0) {
       const sessionDate = moment(item.NgayDaoTao, "DD/MM/YY HH:mm");
-      const startDate = moment(matchingDateDAT.startDate, "DD/MM/YY");
-      const endDate = moment(matchingDateDAT.endDate, "DD/MM/YY").endOf("day"); // End date should be the end of the day
-
-      // Kiểm tra ngày đào tạo nằm trong khoảng từ ngày bắt đầu đến ngày kết thúc
-      if (
-        !sessionDate.isSameOrAfter(startDate) ||
-        !sessionDate.isSameOrBefore(endDate)
-      ) {
-        lyDoLoaiList.push(
-          `Ngoài ngày đào tạo của khoá ${matchingDateDAT.KhoaHoc}`
-        );
+      let isWithinMainSchedule = false;
+      let isWithinAdditionalSchedule = false;
+    
+      matchingDateDATs.forEach((dateDAT) => {
+        const startDate = moment(dateDAT.startDate, "DD/MM/YY");
+        const endDate = moment(dateDAT.endDate, "DD/MM/YY").endOf("day");
+    
+        if (dateDAT.additional === "true") {
+          // Lịch chính
+          if (sessionDate.isSameOrAfter(startDate) && sessionDate.isSameOrBefore(endDate)) {
+            isWithinMainSchedule = true;
+          }
+        } else {
+          // Lịch bổ sung
+          if (sessionDate.isSameOrAfter(startDate) && sessionDate.isSameOrBefore(endDate)) {
+            isWithinAdditionalSchedule = true;
+          }
+        }
+      });
+    
+      // Nếu không nằm trong lịch chính và không nằm trong lịch bổ sung
+      if (!isWithinMainSchedule && !isWithinAdditionalSchedule) {
+        let lyDo = `Ngoài lịch đào tạo của khoá ${item.KhoaHoc}`;
+        if (!isWithinMainSchedule) {
+          lyDo += ' (ngoài lịch chính)';
+        }
+        if (!isWithinAdditionalSchedule) {
+          lyDo += ' (ngoài lịch bổ sung)';
+        }
+        lyDoLoaiList.push(lyDo);
       }
-    }
+    }//end
 
     if (
       matchingCar &&
@@ -279,7 +318,6 @@ router.post("/save-dat-session", async (req, res) => {
     ) {
       // Tạo một mục mới của Dat_session với các thông tin và lý do được cập nhật
       const newItem = new Dat_session({
-        _id: item["MaPhien"],
         TrangThai:
           tiLeLessThan75 ||
           durationGreaterThanOrEqualTo4Hours ||
@@ -287,7 +325,22 @@ router.post("/save-dat-session", async (req, res) => {
         LyDoLoai: lyDoLoai,
         ThoiGianXeTuDong: thoiGianPhut,
         QuangDuongXeTuDong: parseFloat(item.QuangDuong),
-        ...item,
+        TenDanhSachDAT: query,
+        HoTen: item.HoTen,
+        MaHocVien: item.MaHocVien,
+        MaPhien: item.MaPhien,
+        TiLe: item.TiLe,
+        KhoaHoc: item.KhoaHoc,
+        HoTenGiaoVien: item.HoTenGiaoVien,
+        XeTapLai: item.XeTapLai,
+        NgayDaoTao: item.NgayDaoTao,
+        ThoiGian: item.ThoiGian,
+        QuangDuong: item.QuangDuong,
+        STT: item.STT,
+        TotalMorningTime: thoiGianSang,
+        TotalEveningTime: thoiGianToi,
+        TotalMorningDistance: quangDuongSang.toFixed(2),
+        TotalEveningDistance: quangDuongToi.toFixed(2),
       });
 
       // Lưu vào cơ sở dữ liệu
@@ -300,7 +353,6 @@ router.post("/save-dat-session", async (req, res) => {
     } else {
       // Tạo một mục mới của Dat_session với các thông tin và lý do được cập nhật
       const newItem = new Dat_session({
-        _id: item["MaPhien"],
         TrangThai:
           tiLeLessThan75 ||
           durationGreaterThanOrEqualTo4Hours ||
@@ -308,7 +360,22 @@ router.post("/save-dat-session", async (req, res) => {
         LyDoLoai: lyDoLoai,
         ThoiGianXeTuDong: 0,
         QuangDuongXeTuDong: 0,
-        ...item,
+        TenDanhSachDAT: query,
+        HoTen: item.HoTen,
+        MaHocVien: item.MaHocVien,
+        MaPhien: item.MaPhien,
+        TiLe: item.TiLe,
+        KhoaHoc: item.KhoaHoc,
+        HoTenGiaoVien: item.HoTenGiaoVien,
+        XeTapLai: item.XeTapLai,
+        NgayDaoTao: item.NgayDaoTao,
+        ThoiGian: item.ThoiGian,
+        QuangDuong: item.QuangDuong,
+        STT: item.STT,
+        TotalMorningTime: thoiGianSang,
+        TotalEveningTime: thoiGianToi,
+        TotalMorningDistance: quangDuongSang.toFixed(2),
+        TotalEveningDistance: quangDuongToi.toFixed(2),
       });
 
       // Lưu vào cơ sở dữ liệu
@@ -353,22 +420,6 @@ router.post("/save-dat-session", async (req, res) => {
   });
 
   const updates = [];
-
-  // for (const [studentId, dateMap] of studentMap.entries()) {
-  //   for (const [date, data] of dateMap.entries()) {
-  //     if (data.totalDuration > 600 || data.totalDistance > 400) {
-  //       const reason = `Ngày ${date} có tổng thời gian hoặc km quá giới hạn / ngày`;
-
-  //       data.sessions.forEach((session) => {
-  //         session.TrangThai = true;
-  //         session.LyDoLoai = session.LyDoLoai
-  //           ? `${session.LyDoLoai}, ${reason}`
-  //           : reason;
-  //         updates.push(session);
-  //       });
-  //     }
-  //   }
-  // }
 
   for (const [studentId, dateMap] of studentMap.entries()) {
     for (const [date, data] of dateMap.entries()) {
@@ -537,7 +588,11 @@ router.post("/save-dat-session", async (req, res) => {
         { $set: { TrangThai: update.TrangThai, LyDoLoai: update.LyDoLoai } }
       );
     }
-    res.redirect("/computeData");
+    const dat_ss = await Dat_session.find({ TenDanhSachDAT: query }).lean();
+    const distinctTenDanhSach = await DAT.distinct("TenDanhSachDAT").lean();
+
+    // Render the view with fetched data
+    res.render("allDat_session", { dat_ss, query, distinctTenDanhSach });
   } catch (err) {
     console.error("Error saving data:", err);
     res.status(500).send("Internal Server Error");
@@ -548,68 +603,68 @@ function isOverlapping(start1, end1, start2, end2) {
   return start1 < end2 && start2 < end1;
 }
 
-router.post("/uploadxml", upload.array('files', 15), (req, res) => {
+router.post("/uploadxml", upload.array("files", 15), (req, res) => {
   let dataFromAllFiles = [];
 
   const filePromises = req.files.map((file, index) => {
-      return new Promise((resolve, reject) => {
-          const filePath = file.path;
+    return new Promise((resolve, reject) => {
+      const filePath = file.path;
 
-          const fileName = path.basename(
-              file.originalname,
-              path.extname(file.originalname)
+      const fileName = path.basename(
+        file.originalname,
+        path.extname(file.originalname)
+      );
+      const parts = fileName.split("_");
+      const maKhoaHoc = parts[3]; // Extract the full course code
+      const khoaHoc = maKhoaHoc.substring(maKhoaHoc.indexOf("K"));
+
+      // Read and parse the XML file
+      fs.readFile(filePath, "utf8", (err, data) => {
+        if (err) {
+          return reject("Error reading file");
+        }
+
+        xml2js.parseString(data, (err, result) => {
+          if (err) {
+            return reject("Error parsing XML");
+          }
+
+          // Assuming the XML structure, convert it to a usable format
+          const dataFromXml = result.BAO_CAO1.DATA[0].NGUOI_LXS[0].NGUOI_LX.map(
+            (lx) => ({
+              STT: lx.SO_TT[0],
+              MaHocVien: lx.MA_DK[0],
+              KhoaHoc: khoaHoc,
+              MaKhoaHoc: maKhoaHoc,
+              HoTen: lx.HO_VA_TEN[0],
+              NgaySinh: formatDate(lx.NGAY_SINH[0]),
+              GioiTinh: formatGender(lx.GIOI_TINH[0]),
+              SoCMT: lx.SO_CMT[0],
+              NgayCapCMT: lx.NGAY_CAP_CMT[0],
+              NoiCapCMT: lx.NOI_CAP_CMT[0],
+              NgayNhanHoSo: lx.HO_SO[0].NGAY_NHAN_HOSO[0],
+              SoGPLX: lx.SO_GPLX_DA_CO ? lx.SO_GPLX_DA_CO[0] : "",
+              HangGPLX: lx.HANG_GPLX_DA_CO ? lx.HANG_GPLX_DA_CO[0] : "",
+              NoiCapGPLX: lx.DV_CAP_GPLX_DACO ? lx.DV_CAP_GPLX_DACO[0] : "",
+              Anh: lx.HO_SO[0].ANH_CHAN_DUNG[0], // Assuming this field contains the URL of the image
+            })
           );
-          const parts = fileName.split("_");
-          const maKhoaHoc = parts[3]; // Extract the full course code
-          const khoaHoc = maKhoaHoc.substring(maKhoaHoc.indexOf("K"));
 
-          // Read and parse the XML file
-          fs.readFile(filePath, "utf8", (err, data) => {
-              if (err) {
-                  return reject("Error reading file");
-              }
-
-              xml2js.parseString(data, (err, result) => {
-                  if (err) {
-                      return reject("Error parsing XML");
-                  }
-
-                  // Assuming the XML structure, convert it to a usable format
-                  const dataFromXml = result.BAO_CAO1.DATA[0].NGUOI_LXS[0].NGUOI_LX.map(
-                      (lx) => ({
-                          STT: lx.SO_TT[0],
-                          MaHocVien: lx.MA_DK[0],
-                          KhoaHoc: khoaHoc,
-                          MaKhoaHoc: maKhoaHoc,
-                          HoTen: lx.HO_VA_TEN[0],
-                          NgaySinh: formatDate(lx.NGAY_SINH[0]),
-                          GioiTinh: formatGender(lx.GIOI_TINH[0]),
-                          SoCMT: lx.SO_CMT[0],
-                          NgayCapCMT: lx.NGAY_CAP_CMT[0],
-                          NoiCapCMT: lx.NOI_CAP_CMT[0],
-                          NgayNhanHoSo: lx.HO_SO[0].NGAY_NHAN_HOSO[0],
-                          SoGPLX: lx.SO_GPLX_DA_CO ? lx.SO_GPLX_DA_CO[0] : "",
-                          HangGPLX: lx.HANG_GPLX_DA_CO ? lx.HANG_GPLX_DA_CO[0] : "",
-                          NoiCapGPLX: lx.DV_CAP_GPLX_DACO ? lx.DV_CAP_GPLX_DACO[0] : "",
-                          Anh: lx.HO_SO[0].ANH_CHAN_DUNG[0], // Assuming this field contains the URL of the image
-                      })
-                  );
-
-                  dataFromAllFiles = dataFromAllFiles.concat(dataFromXml);
-                  resolve();
-              });
-          });
+          dataFromAllFiles = dataFromAllFiles.concat(dataFromXml);
+          resolve();
+        });
       });
+    });
   });
 
   Promise.all(filePromises)
-      .then(() => {
-          // Render the data in a table
-          res.render('xml_view', { data: dataFromAllFiles });
-      })
-      .catch((err) => {
-          res.status(500).send(err);
-      });
+    .then(() => {
+      // Render the data in a table
+      res.render("xml_view", { data: dataFromAllFiles });
+    })
+    .catch((err) => {
+      res.status(500).send(err);
+    });
 });
 
 router.post("/save-data", async (req, res) => {
@@ -621,14 +676,13 @@ router.post("/save-data", async (req, res) => {
 
   try {
     for (const item of data) {
-      const existingStudent = await Student.findById(item["MaHocVien"]);
+      const existingStudent = await Student.find({MaHocVien:item["MaHocVien"]});
 
       if (existingStudent) {
-        await Student.findByIdAndDelete(item["MaHocVien"]);
+        await Student.findByIdAndDelete(existingStudent._id);
       }
 
       const newItem = new Student({
-        _id: item["MaHocVien"],
         ...item,
       });
 
@@ -643,8 +697,13 @@ router.post("/save-data", async (req, res) => {
 });
 
 router.get("/computeData", async (req, res) => {
+  const query = req.query.tenDanhSach;
   try {
-    const dat_ss = await Dat_session.find({ TrangThai: false });
+    const dat_ss = await Dat_session.find({
+      TrangThai: false,
+      TenDanhSachDAT: query,
+    }).lean();
+
     const studentMap = new Map();
     const missingStudents = [];
 
@@ -694,13 +753,12 @@ router.get("/computeData", async (req, res) => {
     const updatedStudents = [];
 
     for (const [studentId, data] of studentMap.entries()) {
-      const student = await Student.findById(studentId);
+      const student = await Student.findOne({ MaHocVien: studentId });
 
       if (!student) {
-        missingStudents.push(studentId); // Add missing student ID to the array
-        continue; // Skip processing if student is not found
+        missingStudents.push(studentId); 
+        continue;
       }
-
 
       const studentSessions = data.sessions;
       let category = "Unknown";
@@ -715,7 +773,6 @@ router.get("/computeData", async (req, res) => {
           category = "C";
         }
       });
-
       let studentStatus = false;
 
       if (category === "B1") {
@@ -764,7 +821,7 @@ router.get("/computeData", async (req, res) => {
       let xeTapLaiList = Array.from(data.XeTapLai);
 
       for (let bienSoXe of xeTapLaiList) {
-        const car = await Car.findOne({ BienSoXe: bienSoXe });
+        const car = await Car.findOne({ BienSoXe: bienSoXe }).lean();
         if (car) {
           if (car.LoaiHangXe === "B11") {
             data.B1.add(bienSoXe);
@@ -799,16 +856,24 @@ router.get("/computeData", async (req, res) => {
         B1: Array.from(data.B1).join(", "),
         B2: Array.from(data.B2).join(", "),
         C: Array.from(data.C).join(", "),
+        TenDanhSachDAT: query,
       });
     }
 
+    const filter = {
+      MaHocVien: { $in: updatedStudents.map((student) => student.MaHocVien) },
+      TenDanhSachDAT: query,
+    };
+
+    await Total.deleteMany(filter);
+
     await Total.create(updatedStudents);
 
-    const existingTotalStudents = await Total.find();
+    const existingTotalStudents = await Total.find().lean();
     const existingTotalHoTenSet = new Set(
       existingTotalStudents.map((student) => student.HoTen)
     );
-    const students = await Student.find();
+    const students = await Student.find().lean();
 
     // Handle students with HoTen in Student model but not in dat_ss
     for (const student of students) {
@@ -846,12 +911,43 @@ router.get("/computeData", async (req, res) => {
           B1: "",
           B2: "",
           C: "",
+          TenDanhSachDAT: query,
         });
         await newTotal.save();
       }
     }
-    //res.json({ success: true, missingStudents });
-    res.redirect("allTotal");
+
+    const khoahocArray = req.query.khoahoc;
+
+    const kh = await dateDAT.find({}).lean();
+    const total = await Total.find({}).lean();
+    const distinctTenDanhSach = await DAT.distinct("TenDanhSachDAT").lean();
+
+    if (khoahocArray) {
+      const selectedKhoaHoc = Array.isArray(khoahocArray)
+        ? khoahocArray
+        : khoahocArray
+        ? [khoahocArray]
+        : [];
+      const total = await Total.find({ KhoaHoc: { $in: selectedKhoaHoc } }).lean();
+
+      res.render("total", {
+        total,
+        kh,
+        selectedKhoaHoc,
+        distinctTenDanhSach,
+        query,
+        missingStudents: missingStudents.join(", "),
+      });
+    } else {
+      res.render("total", {
+        total,
+        kh,
+        distinctTenDanhSach,
+        query,
+        missingStudents: missingStudents.join(", "),
+      });
+    }
   } catch (err) {
     console.error("Error computing data:", err);
     res.status(500).send("Internal Server Error");
@@ -929,25 +1025,39 @@ router.post("/export-to-excel", (req, res) => {
     },
   });
 
+  const cellReservedStyle = wb.createStyle({
+    font: {
+      name: "Times New Roman",
+      size: 12,
+      color: "000000", // Black font color for visibility
+    },
+    fill: {
+      type: "pattern",
+      patternType: "solid",
+      fgColor: "ffb3b3", // Light red background
+    },
+  });
+
   // Merge cells for the report title
-ws.cell(1, 1, 1, 5, true)
-.string("SỞ LĐTB&XH HẢI DƯƠNG")
-.style(cellNormalStyle);
-ws.cell(2, 1, 2, 5, true)
-.string("TRUNG TÂM GDNN &SHLX  THANH MIỆN")
-.style(cellNormalStyle);
-ws.cell(1, 7, 1, 13, true)
-.string("CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM")
-.style(cellNormalStyle);
-ws.cell(2, 7, 2, 13, true)
-.string("Độc lập - Tự do - Hạnh phúc")
-.style(cellNormalStyle);
+  ws.cell(1, 1, 1, 5, true)
+    .string("SỞ LĐTB&XH HẢI DƯƠNG")
+    .style(cellNormalStyle);
+  ws.cell(2, 1, 2, 5, true)
+    .string("TRUNG TÂM GDNN &SHLX  THANH MIỆN")
+    .style(cellNormalStyle);
+  ws.cell(1, 7, 1, 13, true)
+    .string("CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM")
+    .style(cellNormalStyle);
+  ws.cell(2, 7, 2, 13, true)
+    .string("Độc lập - Tự do - Hạnh phúc")
+    .style(cellNormalStyle);
 
-// Adjusted position for the main title
-ws.cell(4, 1, 4, 12, true)
-.string("BÁO CÁO KẾT QUẢ ĐÀO TẠO THỰC HÀNH LÁI XE TRÊN ĐƯỜNG GIAO THÔNG THEO DANH SÁCH THÍ SINH DỰ TỐT NGHIỆP")
-.style(titleStyle);
-
+  // Adjusted position for the main title
+  ws.cell(4, 1, 4, 12, true)
+    .string(
+      "BÁO CÁO KẾT QUẢ ĐÀO TẠO THỰC HÀNH LÁI XE TRÊN ĐƯỜNG GIAO THÔNG THEO DANH SÁCH THÍ SINH DỰ TỐT NGHIỆP"
+    )
+    .style(titleStyle);
 
   // Define headers with their respective widths
   const headers = [
@@ -967,7 +1077,8 @@ ws.cell(4, 1, 4, 12, true)
 
   // Set header row
   headers.forEach((header, index) => {
-    const cell = ws.cell(6, index + 1)
+    const cell = ws
+      .cell(6, index + 1)
       .string(header.header)
       .style(headerStyle);
 
@@ -1050,12 +1161,28 @@ ws.cell(4, 1, 4, 12, true)
       ws.cell(rowIndex, 8)
         .string(item["Tổng thời gian"])
         .style(cellNormalStyle);
+        
       ws.cell(rowIndex, 9)
         .string(item["Tổng quãng đường(km)"])
         .style(cellNormalStyle);
-      ws.cell(rowIndex, 12).string(item["Kết quả"]).style(cellNormalStyle);
+
+        const ketQuaCell = ws.cell(rowIndex, 12).string(item["Kết quả"]);
+
+      // Apply reserved style if Kết quả is Không đạt
+      if (item["Kết quả"] === "Không đạt") {
+        ketQuaCell.style(cellReservedStyle);
+        ketQuaCell.style({ font: { color: "000000" } }); // Đặt màu chữ đen
+
+        // Apply reserved style to all cells in the same row
+          for (let col = 1; col <= headers.length; col++) {
+            ws.cell(rowIndex, col).style(cellReservedStyle);
+          }
+        } else {
+          ketQuaCell.style(cellNormalStyle);
+        }
+      
       rowIndex++;
-      overallIndex++; // Increment global STT counter
+      overallIndex++; 
     });
   });
 
@@ -1064,14 +1191,14 @@ ws.cell(4, 1, 4, 12, true)
 });
 
 router.get("/search", async function (req, res, next) {
-  const courses = await dateDAT.find({});
+  const courses = await dateDAT.find({}).lean();
 
   res.render("search", {
     title: "Search",
     query: "",
     results: [],
     sessions: [],
-    courses
+    courses,
   });
 });
 
@@ -1089,12 +1216,12 @@ router.get("/search/results", async (req, res) => {
           { SoCMT: query }, // Tìm kiếm chính xác theo SoCMT
           { MaHocVien: query },
         ],
-      });
+      }).lean();
 
       // Nếu tìm thấy kết quả trong model Total, tìm các phiên liên quan trong model Dat_session
       if (results.length > 0) {
         const studentIds = results.map((result) => result.MaHocVien);
-        sessions = await Dat_session.find({ MaHocVien: { $in: studentIds } });
+        sessions = await Dat_session.find({ MaHocVien: { $in: studentIds } }).lean();
       }
     }
 
@@ -1106,28 +1233,28 @@ router.get("/search/results", async (req, res) => {
   }
 });
 
-router.get("/studentDetails/:id", async (req, res)=>{
-    const id = req.params.id;
-    let sessions = [];
-    let results = [];
+router.get("/studentDetails/:id", async (req, res) => {
+  const id = req.params.id;
+  let sessions = [];
+  let results = [];
 
-    results = await Total.find({MaHocVien:id});
+  results = await Total.find({ MaHocVien: id }).lean();
 
-    if (results.length > 0) {
-      const studentIds = results.map((result) => result.MaHocVien);
-      sessions = await Dat_session.find({ MaHocVien: { $in: studentIds } });
-    }
+  if (results.length > 0) {
+    const studentIds = results.map((result) => result.MaHocVien);
+    sessions = await Dat_session.find({ MaHocVien: { $in: studentIds } });
+  }
 
-    res.render("search", {results,sessions});
+  res.render("search", { results, sessions });
 });
 
-router.get("/filter", async (req,res)=>{
+router.get("/filter", async (req, res) => {
   const { trangthai, khoahoc } = req.query;
 
-  const courses = await dateDAT.find({});
-  const tt = await Total.find({ TrangThai: trangthai, KhoaHoc: khoahoc });
+  const courses = await dateDAT.find({}).lean();
+  const tt = await Total.find({ TrangThai: trangthai, KhoaHoc: khoahoc }).lean();
 
-  res.render("search", { tt,courses, khoahoc, trangthai });
+  res.render("search", { tt, courses, khoahoc, trangthai });
 });
 
 router.post("/deleteDate", async (req, res) => {
@@ -1144,13 +1271,14 @@ router.post("/deleteDate", async (req, res) => {
 router.get("/updateDate", async (req, res) => {
   const { id } = req.query;
   try {
-    const dateRange = await dateDAT.findById(id);
-    const data = await dateDAT.find({});
+    const dateRange = await dateDAT.findById(id).lean();
+    const datemain = await dateDAT.find({additional:true}).lean();
+    const datesecond = await dateDAT.find({additional:false}).lean();
 
     dateRange.startDate = convertToISODate(dateRange.startDate);
     dateRange.endDate = convertToISODate(dateRange.endDate);
 
-    res.render("updateDate", { dateRange,data });
+    res.render("updateDate", { dateRange, datemain,datesecond });
   } catch (err) {
     console.error("Error fetching date range:", err);
     res.status(500).send("Error fetching date range");
@@ -1158,7 +1286,7 @@ router.get("/updateDate", async (req, res) => {
 });
 
 router.post("/submitDate", async (req, res) => {
-  const { KhoaHoc, startDate, endDate } = req.body;
+  const { KhoaHoc, startDate, endDate,additional } = req.body;
 
   // Chuyển đổi ngày sang định dạng DD/MM/YY
   const formatDate = (date) => {
@@ -1176,6 +1304,7 @@ router.post("/submitDate", async (req, res) => {
     KhoaHoc,
     startDate: formattedStartDate,
     endDate: formattedEndDate,
+    additional:additional
   });
   await newCourse.save();
   res.redirect("/dateDAT");
@@ -1209,13 +1338,92 @@ router.post("/updateDate", async (req, res) => {
   }
 });
 
+router.delete("/delete-dat-session", async (req, res) => {
+  const { tenDanhSach } = req.query;
+
+  try {
+    await Dat_session.deleteMany({ TenDanhSachDAT: tenDanhSach });
+    await DAT.deleteMany({ TenDanhSachDAT: tenDanhSach });
+    await Total.deleteMany({ TenDanhSachDAT: tenDanhSach });
+
+    res.status(200).send("Deleted successfully");
+  } catch (err) {
+    console.error("Error deleting data:", err);
+    res.status(500).send("Error deleting data");
+  }
+});
+
+router.delete("/deleteComputeData", async (req, res) => {
+  const { tenDanhSach } = req.query;
+
+  try {
+    await Total.deleteMany({ TenDanhSachDAT: tenDanhSach });
+    res.status(200).send("Deleted successfully");
+  } catch (err) {
+    console.error("Error deleting data:", err);
+    res.status(500).send("Error deleting data");
+  }
+});
+
+router.get("/editStudent", async (req, res) => {
+  const maHocVien = req.query.MaHocVien;
+  const student = await Student.findOne({ MaHocVien: maHocVien }).lean();
+  
+  res.render("updateStudent", { student });
+});
+
+router.post('/updateStudent', async (req, res) => {
+  try {
+      const id = req.body.id;
+
+      const updateData = {
+          MaHocVien : req.body.MaHocVien,
+          KhoaHoc: req.body.KhoaHoc,
+          MaKhoaHoc: "30012"+req.body.KhoaHoc,
+          HoTen: req.body.HoTen,
+          NgaySinh: formatDateString(req.body.NgaySinh),
+          GioiTinh: req.body.GioiTinh,
+          SoCMT: req.body.SoCMT,
+      };
+
+      const updatedStudent = await Student.findByIdAndUpdate(id, updateData, { new: true });
+
+      if (!updatedStudent) {
+          return res.status(404).send('Student not found');
+      }
+
+      res.redirect('/allStudent');
+  } catch (err) {
+      console.error('Error updating student:', err);
+      res.status(500).send('Internal Server Error');
+  }
+});
+
+router.post("/deleteStudent", async (req, res) => {
+  const maHocVien = req.body.MaHocVien;
+  await Student.deleteOne({ MaHocVien: maHocVien });
+  res.redirect("/allStudent");
+});
+
 function convertToISODate(dateStr) {
-  const [day, month, year] = dateStr.split('/');
+  const [day, month, year] = dateStr.split("/");
   return `20${year}-${month}-${day}`; // Giả sử năm là 20xx
 }
 
-function parseDuration(duration) {
-  const [hours, minutes] = duration.split("h").map(Number);
+// function parseDuration(duration) {
+//   const [hours, minutes] = duration.split("h").map(Number);
+//   return hours * 60 + minutes;
+// }
+
+function parseDuration(durationString) {
+  if (!durationString || typeof durationString !== "string") {
+    return 0; // Default to 0 minutes if durationString is undefined or not a string
+  }
+
+  const [hoursString, minutesString] = durationString.split("h");
+  const hours = parseInt(hoursString, 10) || 0;
+  const minutes = parseInt(minutesString, 10) || 0;
+
   return hours * 60 + minutes;
 }
 
@@ -1225,13 +1433,24 @@ function formatTime(minutes) {
   return `${hours}h${mins < 10 ? "0" : ""}${mins}`;
 }
 
+const formatDateString = (date) => {
+  const d = new Date(date);
+  let month = '' + (d.getMonth() + 1);
+  let day = '' + d.getDate();
+  const year = d.getFullYear();
+
+  if (month.length < 2) month = '0' + month;
+  if (day.length < 2) day = '0' + day;
+
+  return [year, month, day].join('-');
+};
+
 function formatInputTime(decimalHours) {
   const totalMinutes = Math.round(decimalHours * 60);
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
   return `${hours}h${minutes}`;
 }
-
 
 function formatDate(dateString) {
   // Chuyển đổi từ 'YYYYMMDD' sang 'YYYY-MM-DD'

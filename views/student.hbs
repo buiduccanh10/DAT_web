@@ -16,6 +16,7 @@
         <thead>
             <tr>
                 <th>Mã Học Viên</th>
+                <th>Ảnh</th>
                 <th>Khoá học</th>
                 <th>Họ Tên</th>
                 <th>Ngày Sinh</th>
@@ -24,16 +25,17 @@
                 <th>Ngày Cấp CMT</th>
                 <th>Nơi Cấp CMT</th>
                 <th>Ngày Nhận Hồ Sơ</th>
-                <th>Số GPLX</th>
+                {{!-- <th>Số GPLX</th>
                 <th>Hạng GPLX</th>
-                <th>Nơi Cấp GPLX</th>
-                <th>Ảnh</th>
+                <th>Nơi Cấp GPLX</th> --}}
+                <th>Hành động</th>
             </tr>
         </thead>
         <tbody>
             {{#each student}}
             <tr>
                 <td>{{ this.MaHocVien}}</td>
+                <td><img src="data:image/jpeg;base64,{{ this.Anh}}" style="height: 130px; width:100px;" alt="Ảnh"></td>
                 <td>{{this.KhoaHoc}}</td>
                 <td>{{ this.HoTen}}</td>
                 <td>{{ this.NgaySinh}}</td>
@@ -42,10 +44,25 @@
                 <td>{{ this.NgayCapCMT}}</td>
                 <td>{{ this.NoiCapCMT}}</td>
                 <td>{{ this.NgayNhanHoSo}}</td>
-                <td>{{ this.SoGPLX}}</td>
+                {{!-- <td>{{ this.SoGPLX}}</td>
                 <td>{{ this.HangGPLX}}</td>
-                <td>{{ this.NoiCapGPLX}}</td>
-                <td><img src="data:image/jpeg;base64,{{ this.Anh}}" style="height: 130px; width:100px;" alt="Ảnh"></td>
+                <td>{{ this.NoiCapGPLX}}</td> --}}
+                <td>
+                    <form action="/editStudent" method="GET" style="display:inline;">
+                        <input type="hidden" name="MaHocVien" value="{{ this.MaHocVien }}">
+                        <button type="submit" class="btn btn-primary" style="margin: 10px;">
+                            <i class="fa-solid fa-user-pen"></i>
+                            Sửa
+                        </button>
+                    </form>
+                    <form id="delete-form-{{ this.MaHocVien }}" action="/deleteStudent" method="POST" style="display:inline;">
+                        <input type="hidden" name="MaHocVien" value="{{ this.MaHocVien }}">
+                        <button type="button" class="btn btn-danger" style="margin: 10px;" onclick="confirmDelete('{{ this.MaHocVien }}')">
+                            <i class="fa-solid fa-trash-can"></i>
+                            Xoá
+                        </button>
+                    </form>
+                </td>
             </tr>
             {{/each}}
         </tbody>
@@ -53,6 +70,14 @@
       </div>
 
     </div>
+
+    <script>
+        function confirmDelete(maHocVien) {
+            if (confirm("Bạn có chắc chắn muốn xoá học viên này?")) {
+                document.getElementById('delete-form-' + maHocVien).submit();
+            }
+        }
+    </script>
     
 </body>
 </html>

@@ -1,7 +1,6 @@
 const mongoose = require("mongoose");
 
 const dat_sessionSchema = new mongoose.Schema({
-  _id: String,
   STT: String,
   MaPhien: String,
   TiLe: String,
@@ -21,6 +20,7 @@ const dat_sessionSchema = new mongoose.Schema({
   TotalEveningTime: Number,
   TotalMorningDistance: Number,
   TotalEveningDistance: Number,
+  TenDanhSachDAT:String
 });
 
 const Dat_session = mongoose.model(

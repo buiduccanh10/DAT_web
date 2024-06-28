@@ -113,6 +113,7 @@
                         <div class="col-md-4">
                             <label for="khoahoc">Chọn khoá học:</label>
                             <select id="khoahoc" name="khoahoc" class="form-select" onchange="document.getElementById('filterForm').submit();">
+                                <option value="">Chọn...</option>
                                 {{#each courses}}
                                 <option value="{{ this.KhoaHoc }}" {{#if (eq this.KhoaHoc ../khoahoc)}}selected{{/if}}>{{ this.KhoaHoc }}</option>
                                 {{/each}}

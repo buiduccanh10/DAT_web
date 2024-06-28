@@ -73,6 +73,7 @@
         <div class="button-container">
             <button id="saveButton" class="btn btn-success">Lưu</button>
         </div>
+        <input type="text" style="margin-bottom: 15px;" name="namelistss" id="namelistss" placeholder="Tên danh sách phiên học..." class="form-control" required>
         <div class="table-container">
             <table class="table table-bordered table-striped" id="data-table">
                 <thead>
@@ -132,7 +133,13 @@
 
         document.getElementById('saveButton').addEventListener('click', function () {
             const rows = document.querySelectorAll('#data-table tbody tr');
+            const namelistss = document.getElementById('namelistss').value;
             const data = [];
+
+            if (!namelistss) {
+                alert('Vui lòng đặt tên cho danh sách phiên học!');
+                return;
+            }
 
             rows.forEach(row => {
                 const rowData = {
@@ -147,13 +154,14 @@
                     NgayDaoTao: row.cells[8].textContent,
                     ThoiGian: row.cells[9].textContent,
                     QuangDuong: row.cells[10].textContent,
+                    TenDanhSachDAT: namelistss
                 };
                 data.push(rowData);
             });
 
             spinnerOverlay.style.display = 'flex';
 
-            fetch('/save-dat-session', {
+            fetch('/save-dat', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -163,7 +171,7 @@
                 spinnerOverlay.style.display = 'none';
                 if (response.ok) {
                     alert('Data saved successfully!'); 
-                    window.location.href = '/allTotal';
+                    window.location.href = `/save-dat-session?tenDanhSach=${encodeURIComponent(namelistss)}`;
                 } else {
                     alert('Error saving data.');
                 }

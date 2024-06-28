@@ -69,6 +69,15 @@
         .card {
             margin: 20px;
         }
+        .warning {
+        margin: 20px;
+        padding: 15px;
+        background-color: #fff3cd;
+        border: 1px solid #ffeeba;
+        border-radius: 5px;
+        display: flex;
+        color: rgb(158, 158, 2);
+    }
     </style>
   </head>
   <body>
@@ -133,25 +142,29 @@
             {{/each}}
         </tbody>
 </table>
-
+    {{#if missingStudents}}
+        <div class="warning">
+            <i class="fa-solid fa-circle-exclamation"></i>
+            <h6 style="color: rgb(158, 158, 2);">Warning: </h6>
+            <h6> Mã học viên '{{missingStudents}}' không khớp với thông tin học viên</h6>
+        </div>
+    {{/if}}
+    
     <div class="card mb-4" style="margin:20px">
       <div class="card-header" style="display: inline-flex; justify-content:space-between;">
         <div>
             <i class="fas fa-table me-1"></i>
             Bảng Báo cáo tổng hợp
-        </div>
-        <div>
-            <button class="filter-button" onclick="toggleFilter()" style="margin-right: 10px;"><i class="fas fa-filter"></i></button>
-            <button class="export-button" onclick="exportToExcel()">
-                <i class="fa-solid fa-file-excel"></i>
-                Xuất Excel
-            </button>
-        </div>
-      </div>
-      <div class="card-body">
+            <form action="/computeData" id="computedat" method="get">
+                <label for="tenDanhSach">Chọn danh sách phiên học:</label>
+                    <select id="tenDanhSach" name="tenDanhSach" onchange="document.getElementById('computedat').submit();">
+                        <option value="">Chọn...</option>
+                        {{#each distinctTenDanhSach}}
+                            <option value="{{this}}" {{#if (eq this ../query)}}selected{{/if}}>{{this}}</option>
+                        {{/each}}
+                    </select>
 
-        <form action="/allTotal" method="get" id="filterForm" class="checkbox-form" style="display: none;">
-            <div class="checkbox-container">
+                <div class="checkbox-container" id="filterForm" style="display:none; margin-top:10px">
                 {{#each kh}}
                     <div class="checkbox-item">
                         <input 
@@ -159,14 +172,31 @@
                             id="khoahoc_{{@index}}" 
                             name="khoahoc" 
                             value="{{this.KhoaHoc}}" 
-                            onchange="document.getElementById('filterForm').submit();"
+                            onchange="document.getElementById('computedat').submit();"
                             {{#if (checkbox this.KhoaHoc ../selectedKhoaHoc)}}checked{{/if}}
                         >
                         <label for="khoahoc_{{@index}}">{{this.KhoaHoc}}</label>
-                    </div>
+                </div>
                 {{/each}}
             </div>
-        </form>
+            </form>
+        </div>
+
+        <div>
+            {{#if query}}
+                <button type="button" class="btn btn-danger" id="deleteTotal">
+                <i class="fa-solid fa-trash-can"></i>
+                Xoá
+                </button>
+            {{/if}}
+            <button class="filter-button" onclick="toggleFilter()" style="margin-right: 10px; margin-left: 10px;"><i class="fas fa-filter"></i></button>
+            <button class="export-button" onclick="exportToExcel()">
+                <i class="fa-solid fa-file-excel"></i>
+                Xuất Excel
+            </button>
+        </div>
+      </div>
+      <div class="card-body">
 
         <table id="datatablesSimple">
           <thead>
@@ -235,6 +265,27 @@
 </html>
 
 <script>
+
+document.getElementById("deleteTotal").addEventListener("click", function() {
+        if (confirm("Bạn có chắc chắn muốn xóa BC tổng hợp '{{query}}' này không?")) {
+          fetch(`/deleteComputeData?tenDanhSach={{query}}`, {
+            method: "DELETE",
+          })
+          .then(response => {
+            if (response.ok) {
+              alert("Đã xóa thành công!");
+               window.location.href = "/allTotal";
+            } else {
+              alert("Xóa thất bại, vui lòng thử lại.");
+            }
+          })
+          .catch(error => {
+            console.error("Error:", error);
+            alert("Xóa thất bại, vui lòng thử lại.");
+          });
+        }
+      });
+
 function toggleFilter() {
   const filterForm = document.getElementById('filterForm');
   filterForm.style.display = filterForm.style.display === 'block' ? 'none' : 'block';
