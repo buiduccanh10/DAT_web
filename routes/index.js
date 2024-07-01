@@ -696,6 +696,26 @@ router.post("/save-data", async (req, res) => {
   }
 });
 
+router.post('/updateSession', async (req, res) => {
+  try {
+    const { sessionIds } = req.body;
+
+    if (!Array.isArray(sessionIds)) {
+      return res.status(400).json({ error: 'Invalid input' });
+    }
+
+    await Dat_session.updateMany(
+      { _id: { $in: sessionIds } },
+      { $set: { TrangThai: false, LyDoLoai: '' } }
+    );
+
+    res.status(200).json({ message: 'Sessions updated successfully' });
+  } catch (error) {
+    console.error('Error updating sessions:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
 router.get("/computeData", async (req, res) => {
   const query = req.query.tenDanhSach;
   try {

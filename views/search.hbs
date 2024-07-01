@@ -81,9 +81,9 @@
                                 <td>{{ this.TotalDuration }}</td>
                                 <td>{{ this.TotalDistance }}</td>
                                 {{#if this.TrangThai }}
-                                <td style="color: red;">Bảo lưu</td>
+                                    <td style="color: red;">Bảo lưu</td>
                                 {{else}}
-                                <td>Đạt</td>
+                                    <td>Đạt</td>
                                 {{/if}}
                                 <td>{{ this.LyDo }}</td>
                             </tr>
@@ -197,8 +197,11 @@
         <!-- Bảng các phiên liên quan -->
         {{#if sessions.length}}
         <div class="card mt-4">
-            <div class="card-header">
-                Các phiên liên quan
+            <div class="card-header" style="display: flex; justify-content:space-between">
+                <div>Các phiên liên quan</div>
+                <div>
+                    <button id="duyet" class="btn btn-success">Duyệt đạt</button>
+                </div>  
             </div>
             <div class="card-body">
                 <div class="table-responsive">
@@ -215,6 +218,7 @@
                                 <th>Quãng Đường</th>
                                 <th>Trạng Thái</th>
                                 <th>Lý Do Loại</th>
+                                <th>Duyệt</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -234,6 +238,12 @@
                                 <td>Đạt</td>
                                 {{/if}}
                                 <td>{{ this.LyDoLoai }}</td>
+                                <td>
+                                {{#if this.TrangThai }}
+                                    <input type="checkbox" name="sessionIds" value="{{this._id}}">
+                                    <input type="hidden" name="sessionlist" value="{{this.TenDanhSachDAT}}">
+                                {{/if}}
+                                </td>
                             </tr>
                             {{/each}}
                         </tbody>
@@ -243,6 +253,41 @@
         </div>
         {{/if}}
     </div>
+ <script>
+document.getElementById('duyet').addEventListener('click', function () {
+    const checkboxes = document.querySelectorAll('input[name="sessionIds"]:checked');
+    const selectedIds = Array.from(checkboxes).map(cb => cb.value);
+    const sslist = document.querySelectorAll('input[name="sessionlist"]')
+    const queryValue = document.getElementById('query').value;
+
+    fetch('/updateSession', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ sessionIds: selectedIds })
+    }).then(response => {
+        if (response.ok) {
+            const sslistValues = Array.from(sslist).map(input => input.value);
+            const sslistQueryString = encodeURIComponent(sslistValues.join(','));
+
+            // Redirect to computeData first
+            window.location.href = `/computeData?tenDanhSach=${sslistQueryString}`;
+            
+            // After computeData, redirect to search/results with query
+            setTimeout(() => {
+                const queryString = encodeURIComponent(queryValue);
+                window.location.href = `/search/results?query=${queryString}`;
+            }, 1000); // Adjust the timeout as needed to ensure computeData completes
+        } else {
+            alert('Error updating sessions');
+        }
+    }).catch(error => {
+        console.error('Error:', error);
+        alert('Error updating sessions');
+    });
+});
+</script>
     <!-- Bootstrap JS và các script khác -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
