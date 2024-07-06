@@ -204,7 +204,7 @@ router.get("/save-dat-session", async (req, res) => {
     // Kiểm tra xem NgayDaoTao + ThoiGian nằm trong khoảng thời gian sáng hay tối không
     const ngayDaoTao = moment(item.NgayDaoTao, "DD/MM/YY HH:mm");
     const ketThucSang = moment(ngayDaoTao).set({
-      hour: 17,
+      hour: 18,
       minute: 59,
       second: 59,
     });
@@ -807,7 +807,7 @@ router.get("/computeData", async (req, res) => {
       } else if (category === "B2") {
         if (data.TongThoiGianB11 < 192)
           reasons.push("Chưa đi đủ thời gian B11");
-        if (data.TongQuangDuongB11 < 110)
+        if (data.TongQuangDuongB11 < 120)
           reasons.push("Chưa đi đủ quãng đường B11");
         if (data.totalDuration < 1200)
           reasons.push("Thời gian chưa đạt 20 giờ");
