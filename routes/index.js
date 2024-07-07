@@ -203,11 +203,22 @@ router.get("/save-dat-session", async (req, res) => {
 
     // Kiểm tra xem NgayDaoTao + ThoiGian nằm trong khoảng thời gian sáng hay tối không
     const ngayDaoTao = moment(item.NgayDaoTao, "DD/MM/YY HH:mm");
-    const ketThucSang = moment(ngayDaoTao).set({
-      hour: 18,
-      minute: 59,
-      second: 59,
-    });
+
+    let ketThucSang;
+    if (moment(ngayDaoTao).isBefore('2024-06-01')) {
+      ketThucSang = moment(ngayDaoTao).set({
+        hour: 19,
+        minute: 0,
+        second: 0
+      });
+    } else {
+      ketThucSang = moment(ngayDaoTao).set({
+        hour: 18,
+        minute: 0,
+        second: 0
+      });
+    }
+
     const ketThucToi = moment(ngayDaoTao).add(thoiGianPhut, "minutes");
 
     // chia sang toi thoi
@@ -807,7 +818,7 @@ router.get("/computeData", async (req, res) => {
       } else if (category === "B2") {
         if (data.TongThoiGianB11 < 192)
           reasons.push("Chưa đi đủ thời gian B11");
-        if (data.TongQuangDuongB11 < 120)
+        if (data.TongQuangDuongB11 < 110)
           reasons.push("Chưa đi đủ quãng đường B11");
         if (data.totalDuration < 1200)
           reasons.push("Thời gian chưa đạt 20 giờ");
