@@ -435,7 +435,7 @@ router.get("/save-dat-session", async (req, res) => {
   for (const [studentId, dateMap] of studentMap.entries()) {
     for (const [date, data] of dateMap.entries()) {
       // Check if the day total duration or distance exceed limits
-      if (data.totalDuration > 600 || data.totalDistance > 400) {
+      if (data.totalDuration > 600 || data.totalDistance > 450) {
         let latestSession = null;
         let latestEndTime = null;
 
