@@ -784,6 +784,15 @@ router.get("/computeData", async (req, res) => {
     const updatedStudents = [];
 
     for (const [studentId, data] of studentMap.entries()) {
+      const allSessions = await Dat_session.find({ MaHocVien: studentId }).lean();
+      let totalDuration = 0;
+      let totalDistance = 0;
+
+      allSessions.forEach((session) => {
+        totalDuration += session.TotalMorningTime + session.TotalEveningTime;
+        totalDistance += session.TotalMorningDistance + session.TotalEveningDistance;
+      });
+      
       const student = await Student.findOne({ MaHocVien: studentId });
 
       if (!student) {
@@ -879,8 +888,10 @@ router.get("/computeData", async (req, res) => {
         TotalEveningTime: formatTime(data.totalEveningTime),
         TotalMorningDistance: data.totalMorningDistance.toFixed(2),
         TotalEveningDistance: data.totalEveningDistance.toFixed(2),
-        TotalDuration: formatTime(data.totalDuration),
-        TotalDistance: data.totalDistance.toFixed(2),
+        // TotalDuration: formatTime(data.totalDuration),
+        // TotalDistance: data.totalDistance.toFixed(2),
+        TotalDuration: formatTime(totalDuration),
+        TotalDistance: totalDistance.toFixed(2),
         Category: category,
         TrangThai: studentStatus,
         LyDo: reasons.join(", "),
