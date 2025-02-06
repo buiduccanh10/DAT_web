@@ -12,6 +12,7 @@ const DAT = require("../model/DAT");
 const Total = require("../model/total");
 const Car = require("../model/car");
 const dateDAT = require("../model/dateDAT");
+const studentDateDAT = require("../model/studentDateDAT");
 const excel = require("excel4node");
 
 /* GET home page. */
@@ -24,10 +25,15 @@ router.get("/dashboard", function (req, res, next) {
 });
 
 router.get("/dateDAT", async function (req, res, next) {
-  const datemain = await dateDAT.find({additional:true}).lean();
-  const datesecond = await dateDAT.find({additional:false}).lean();
+  const datemain = await dateDAT.find({}).lean();
 
-  res.render("dateDAT", { datemain, datesecond});
+  res.render("dateDAT", { datemain });
+});
+
+router.get("/studentDateDAT", async function (req, res, next) {
+  const studDateDAT = await studentDateDAT.find({}).lean();
+
+  res.render("studentDateDAT", { studDateDAT });
 });
 
 router.get("/xml", function (req, res, next) {
@@ -205,17 +211,17 @@ router.get("/save-dat-session", async (req, res) => {
     const ngayDaoTao = moment(item.NgayDaoTao, "DD/MM/YY HH:mm");
 
     let ketThucSang;
-    if (moment(ngayDaoTao).isBefore('2024-06-01')) {
+    if (moment(ngayDaoTao).isBefore("2024-06-01")) {
       ketThucSang = moment(ngayDaoTao).set({
         hour: 19,
         minute: 0,
-        second: 0
+        second: 0,
       });
     } else {
       ketThucSang = moment(ngayDaoTao).set({
         hour: 18,
         minute: 0,
-        second: 0
+        second: 0,
       });
     }
 
@@ -255,41 +261,21 @@ router.get("/save-dat-session", async (req, res) => {
     const matchingDateDATs = dateDATs.filter(
       (dateDAT) => dateDAT.KhoaHoc === item.KhoaHoc
     );
-    
+
+    let isWithinMainSchedule = true;
     if (matchingDateDATs.length > 0) {
       const sessionDate = moment(item.NgayDaoTao, "DD/MM/YY HH:mm");
-      let isWithinMainSchedule = false;
-      let isWithinAdditionalSchedule = false;
-    
-      matchingDateDATs.forEach((dateDAT) => {
+      isWithinMainSchedule = matchingDateDATs.some((dateDAT) => {
         const startDate = moment(dateDAT.startDate, "DD/MM/YY");
         const endDate = moment(dateDAT.endDate, "DD/MM/YY").endOf("day");
-    
-        if (dateDAT.additional === "true") {
-          // Lịch chính
-          if (sessionDate.isSameOrAfter(startDate) && sessionDate.isSameOrBefore(endDate)) {
-            isWithinMainSchedule = true;
-          }
-        } else {
-          // Lịch bổ sung
-          if (sessionDate.isSameOrAfter(startDate) && sessionDate.isSameOrBefore(endDate)) {
-            isWithinAdditionalSchedule = true;
-          }
-        }
+        return sessionDate.isSameOrAfter(startDate) && sessionDate.isSameOrBefore(endDate);
       });
-    
-      // Nếu không nằm trong lịch chính và không nằm trong lịch bổ sung
-      if (!isWithinMainSchedule && !isWithinAdditionalSchedule) {
-        let lyDo = `Ngoài lịch đào tạo của khoá ${item.KhoaHoc}`;
-        if (!isWithinMainSchedule) {
-          lyDo += ' (ngoài lịch chính)';
-        }
-        if (!isWithinAdditionalSchedule) {
-          lyDo += ' (ngoài lịch bổ sung)';
-        }
-        lyDoLoaiList.push(lyDo);
-      }
-    }//end
+    }
+    if (!isWithinMainSchedule) {
+      let lyDo = `Ngoài lịch đào tạo của khoá ${item.KhoaHoc}`;
+      lyDoLoaiList.push(lyDo);
+    }
+    const scheduleViolation = !isWithinMainSchedule;
 
     if (
       matchingCar &&
@@ -332,7 +318,7 @@ router.get("/save-dat-session", async (req, res) => {
         TrangThai:
           tiLeLessThan75 ||
           durationGreaterThanOrEqualTo4Hours ||
-          thoiGianPhut <= 5,
+          thoiGianPhut <= 5 ||scheduleViolation,
         LyDoLoai: lyDoLoai,
         ThoiGianXeTuDong: thoiGianPhut,
         QuangDuongXeTuDong: parseFloat(item.QuangDuong),
@@ -367,7 +353,7 @@ router.get("/save-dat-session", async (req, res) => {
         TrangThai:
           tiLeLessThan75 ||
           durationGreaterThanOrEqualTo4Hours ||
-          thoiGianPhut <= 5,
+          thoiGianPhut <= 5 ||scheduleViolation,
         LyDoLoai: lyDoLoai,
         ThoiGianXeTuDong: 0,
         QuangDuongXeTuDong: 0,
@@ -435,7 +421,7 @@ router.get("/save-dat-session", async (req, res) => {
   for (const [studentId, dateMap] of studentMap.entries()) {
     for (const [date, data] of dateMap.entries()) {
       // Check if the day total duration or distance exceed limits
-      if (data.totalDuration > 600 || data.totalDistance > 450) {
+      if (data.totalDuration > 600 || data.totalDistance > 500) {
         let latestSession = null;
         let latestEndTime = null;
 
@@ -591,6 +577,57 @@ router.get("/save-dat-session", async (req, res) => {
     }
   }
 
+  // Nhóm các phiên theo khóa học và xe
+  const courseVehicleGroups = {}; // Cấu trúc: { [KhoaHoc]: { [XeTapLai]: Set(MaHocVien) } }
+  sessions.forEach((session) => {
+    const course = session.KhoaHoc;
+    const vehicle = session.XeTapLai;
+    if (!courseVehicleGroups[course]) {
+      courseVehicleGroups[course] = {};
+    }
+    if (!courseVehicleGroups[course][vehicle]) {
+      courseVehicleGroups[course][vehicle] = new Set();
+    }
+    courseVehicleGroups[course][vehicle].add(session.MaHocVien);
+  });
+
+  // Kiểm tra từng nhóm
+  for (const course in courseVehicleGroups) {
+    for (const vehicle in courseVehicleGroups[course]) {
+      const studentCount = courseVehicleGroups[course][vehicle].size;
+      // Xác định ngưỡng: nếu xe thuộc loại B11 thì cho tối đa 35, ngược lại (B2) cho 5
+      let threshold = 5;
+      const sampleSession = sessions.find(
+        (s) => s.KhoaHoc === course && s.XeTapLai === vehicle
+      );
+      if (sampleSession) {
+        const matchingCar = cars.find(
+          (car) => car.BienSoXe === vehicle
+        );
+        if (matchingCar && matchingCar.LoaiHangXe === "B11") {
+          threshold = 35;
+        }
+      }
+      // Nếu số học viên vượt quá ngưỡng, cập nhật các phiên của nhóm này
+      if (studentCount > threshold) {
+        const violationReason = `Xe ${vehicle} trong khóa học ${course} chỉ cho phép tối đa ${threshold} học viên, hiện có ${studentCount} học viên`;
+        sessions.forEach((session) => {
+          if (session.KhoaHoc === course && session.XeTapLai === vehicle) {
+            session.TrangThai = true;
+            if (session.LyDoLoai) {
+              if (!session.LyDoLoai.includes(violationReason)) {
+                session.LyDoLoai += `, ${violationReason}`;
+              }
+            } else {
+              session.LyDoLoai = violationReason;
+            }
+            updates.push(session);
+          }
+        });
+      }
+    }
+  }
+
   // Lưu vào cơ sở dữ liệu
   try {
     for (const update of updates) {
@@ -687,7 +724,9 @@ router.post("/save-data", async (req, res) => {
 
   try {
     for (const item of data) {
-      const existingStudent = await Student.find({MaHocVien:item["MaHocVien"]});
+      const existingStudent = await Student.find({
+        MaHocVien: item["MaHocVien"],
+      });
 
       if (existingStudent) {
         await Student.findByIdAndDelete(existingStudent._id);
@@ -707,23 +746,23 @@ router.post("/save-data", async (req, res) => {
   }
 });
 
-router.post('/updateSession', async (req, res) => {
+router.post("/updateSession", async (req, res) => {
   try {
     const { sessionIds } = req.body;
 
     if (!Array.isArray(sessionIds)) {
-      return res.status(400).json({ error: 'Invalid input' });
+      return res.status(400).json({ error: "Invalid input" });
     }
 
     await Dat_session.updateMany(
       { _id: { $in: sessionIds } },
-      { $set: { TrangThai: false, LyDoLoai: '' } }
+      { $set: { TrangThai: false, LyDoLoai: "" } }
     );
 
-    res.status(200).json({ message: 'Sessions updated successfully' });
+    res.status(200).json({ message: "Sessions updated successfully" });
   } catch (error) {
-    console.error('Error updating sessions:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
+    console.error("Error updating sessions:", error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -784,19 +823,22 @@ router.get("/computeData", async (req, res) => {
     const updatedStudents = [];
 
     for (const [studentId, data] of studentMap.entries()) {
-      const allSessions = await Dat_session.find({ MaHocVien: studentId }).lean();
+      const allSessions = await Dat_session.find({
+        MaHocVien: studentId,
+      }).lean();
       let totalDuration = 0;
       let totalDistance = 0;
 
       allSessions.forEach((session) => {
         totalDuration += session.TotalMorningTime + session.TotalEveningTime;
-        totalDistance += session.TotalMorningDistance + session.TotalEveningDistance;
+        totalDistance +=
+          session.TotalMorningDistance + session.TotalEveningDistance;
       });
-      
+
       const student = await Student.findOne({ MaHocVien: studentId });
 
       if (!student) {
-        missingStudents.push(studentId); 
+        missingStudents.push(studentId);
         continue;
       }
 
@@ -971,7 +1013,9 @@ router.get("/computeData", async (req, res) => {
         : khoahocArray
         ? [khoahocArray]
         : [];
-      const total = await Total.find({ KhoaHoc: { $in: selectedKhoaHoc } }).lean();
+      const total = await Total.find({
+        KhoaHoc: { $in: selectedKhoaHoc },
+      }).lean();
 
       res.render("total", {
         total,
@@ -1203,12 +1247,12 @@ router.post("/export-to-excel", (req, res) => {
       ws.cell(rowIndex, 8)
         .string(item["Tổng thời gian"])
         .style(cellNormalStyle);
-        
+
       ws.cell(rowIndex, 9)
         .string(item["Tổng quãng đường(km)"])
         .style(cellNormalStyle);
 
-        const ketQuaCell = ws.cell(rowIndex, 12).string(item["Kết quả"]);
+      const ketQuaCell = ws.cell(rowIndex, 12).string(item["Kết quả"]);
 
       // Apply reserved style if Kết quả is Không đạt
       if (item["Kết quả"] === "Không đạt") {
@@ -1216,15 +1260,15 @@ router.post("/export-to-excel", (req, res) => {
         ketQuaCell.style({ font: { color: "000000" } }); // Đặt màu chữ đen
 
         // Apply reserved style to all cells in the same row
-          for (let col = 1; col <= headers.length; col++) {
-            ws.cell(rowIndex, col).style(cellReservedStyle);
-          }
-        } else {
-          ketQuaCell.style(cellNormalStyle);
+        for (let col = 1; col <= headers.length; col++) {
+          ws.cell(rowIndex, col).style(cellReservedStyle);
         }
-      
+      } else {
+        ketQuaCell.style(cellNormalStyle);
+      }
+
       rowIndex++;
-      overallIndex++; 
+      overallIndex++;
     });
   });
 
@@ -1263,7 +1307,9 @@ router.get("/search/results", async (req, res) => {
       // Nếu tìm thấy kết quả trong model Total, tìm các phiên liên quan trong model Dat_session
       if (results.length > 0) {
         const studentIds = results.map((result) => result.MaHocVien);
-        sessions = await Dat_session.find({ MaHocVien: { $in: studentIds } }).lean();
+        sessions = await Dat_session.find({
+          MaHocVien: { $in: studentIds },
+        }).lean();
       }
     }
 
@@ -1294,7 +1340,10 @@ router.get("/filter", async (req, res) => {
   const { trangthai, khoahoc } = req.query;
 
   const courses = await dateDAT.find({}).lean();
-  const tt = await Total.find({ TrangThai: trangthai, KhoaHoc: khoahoc }).lean();
+  const tt = await Total.find({
+    TrangThai: trangthai,
+    KhoaHoc: khoahoc,
+  }).lean();
 
   res.render("search", { tt, courses, khoahoc, trangthai });
 });
@@ -1310,27 +1359,27 @@ router.post("/deleteDate", async (req, res) => {
   }
 });
 
-router.get("/updateDate", async (req, res) => {
-  const { id } = req.query;
-  try {
-    const dateRange = await dateDAT.findById(id).lean();
-    const datemain = await dateDAT.find({additional:true}).lean();
-    const datesecond = await dateDAT.find({additional:false}).lean();
+// router.get("/updateDate", async (req, res) => {
+//   const { id } = req.query;
+//   try {
+//     const dateRange = await dateDAT.findById(id).lean();
+//     const datemain = await dateDAT.find({additional:true}).lean();
+//     const datesecond = await dateDAT.find({additional:false}).lean();
 
-    dateRange.startDate = convertToISODate(dateRange.startDate);
-    dateRange.endDate = convertToISODate(dateRange.endDate);
+//     dateRange.startDate = convertToISODate(dateRange.startDate);
+//     dateRange.endDate = convertToISODate(dateRange.endDate);
 
-    res.render("updateDate", { dateRange, datemain,datesecond });
-  } catch (err) {
-    console.error("Error fetching date range:", err);
-    res.status(500).send("Error fetching date range");
-  }
-});
+//     res.render("updateDate", { dateRange, datemain,datesecond });
+//   } catch (err) {
+//     console.error("Error fetching date range:", err);
+//     res.status(500).send("Error fetching date range");
+//   }
+// });
 
 router.post("/submitDate", async (req, res) => {
-  const { KhoaHoc, startDate, endDate,additional } = req.body;
+  const { id, KhoaHoc, startDate, endDate, startDateB11, endDateB11 } =
+    req.body;
 
-  // Chuyển đổi ngày sang định dạng DD/MM/YY
   const formatDate = (date) => {
     const d = new Date(date);
     let day = String(d.getDate()).padStart(2, "0");
@@ -1341,44 +1390,59 @@ router.post("/submitDate", async (req, res) => {
 
   const formattedStartDate = formatDate(startDate);
   const formattedEndDate = formatDate(endDate);
+  const formattedStartDateB11 =
+    startDateB11 === "" ? "" : formatDate(startDateB11);
+  const formattedEndDateB11 = endDateB11 === "" ? "" : formatDate(endDateB11);
 
-  const newCourse = new dateDAT({
-    KhoaHoc,
-    startDate: formattedStartDate,
-    endDate: formattedEndDate,
-    additional:additional
-  });
-  await newCourse.save();
-  res.redirect("/dateDAT");
-});
-
-router.post("/updateDate", async (req, res) => {
-  const { id, KhoaHoc, startDate, endDate } = req.body;
-
-  // Chuyển đổi ngày sang định dạng DD/MM/YY
-  const formatDate = (date) => {
-    const d = new Date(date);
-    let day = String(d.getDate()).padStart(2, "0");
-    let month = String(d.getMonth() + 1).padStart(2, "0");
-    let year = String(d.getFullYear()).slice(2);
-    return `${day}/${month}/${year}`;
-  };
-
-  const formattedStartDate = formatDate(startDate);
-  const formattedEndDate = formatDate(endDate);
-
-  try {
-    await dateDAT.findByIdAndUpdate(id, {
+  if (id) {
+    const updateData = {
       KhoaHoc,
       startDate: formattedStartDate,
       endDate: formattedEndDate,
+      startDateB11: formattedStartDateB11,
+      endDateB11: formattedEndDateB11,
+    };
+    await dateDAT.findByIdAndUpdate(id, updateData);
+  } else {
+    const newCourse = new dateDAT({
+      KhoaHoc,
+      startDate: formattedStartDate,
+      endDate: formattedEndDate,
+      startDateB11: formattedStartDateB11,
+      endDateB11: formattedEndDateB11,
     });
-    res.redirect("dateDAT");
-  } catch (err) {
-    console.error("Error updating date range:", err);
-    res.status(500).send("Error updating date range");
+    await newCourse.save();
   }
+  res.redirect("/dateDAT");
 });
+
+// router.post("/updateDate", async (req, res) => {
+//   const { id, KhoaHoc, startDate, endDate } = req.body;
+
+//   // Chuyển đổi ngày sang định dạng DD/MM/YY
+//   const formatDate = (date) => {
+//     const d = new Date(date);
+//     let day = String(d.getDate()).padStart(2, "0");
+//     let month = String(d.getMonth() + 1).padStart(2, "0");
+//     let year = String(d.getFullYear()).slice(2);
+//     return `${day}/${month}/${year}`;
+//   };
+
+//   const formattedStartDate = formatDate(startDate);
+//   const formattedEndDate = formatDate(endDate);
+
+//   try {
+//     await dateDAT.findByIdAndUpdate(id, {
+//       KhoaHoc,
+//       startDate: formattedStartDate,
+//       endDate: formattedEndDate,
+//     });
+//     res.redirect("dateDAT");
+//   } catch (err) {
+//     console.error("Error updating date range:", err);
+//     res.status(500).send("Error updating date range");
+//   }
+// });
 
 router.delete("/delete-dat-session", async (req, res) => {
   const { tenDanhSach } = req.query;
@@ -1410,34 +1474,36 @@ router.delete("/deleteComputeData", async (req, res) => {
 router.get("/editStudent", async (req, res) => {
   const maHocVien = req.query.MaHocVien;
   const student = await Student.findOne({ MaHocVien: maHocVien }).lean();
-  
+
   res.render("updateStudent", { student });
 });
 
-router.post('/updateStudent', async (req, res) => {
+router.post("/updateStudent", async (req, res) => {
   try {
-      const id = req.body.id;
+    const id = req.body.id;
 
-      const updateData = {
-          MaHocVien : req.body.MaHocVien,
-          KhoaHoc: req.body.KhoaHoc,
-          MaKhoaHoc: "30012"+req.body.KhoaHoc,
-          HoTen: req.body.HoTen,
-          NgaySinh: formatDateString(req.body.NgaySinh),
-          GioiTinh: req.body.GioiTinh,
-          SoCMT: req.body.SoCMT,
-      };
+    const updateData = {
+      MaHocVien: req.body.MaHocVien,
+      KhoaHoc: req.body.KhoaHoc,
+      MaKhoaHoc: "30012" + req.body.KhoaHoc,
+      HoTen: req.body.HoTen,
+      NgaySinh: formatDateString(req.body.NgaySinh),
+      GioiTinh: req.body.GioiTinh,
+      SoCMT: req.body.SoCMT,
+    };
 
-      const updatedStudent = await Student.findByIdAndUpdate(id, updateData, { new: true });
+    const updatedStudent = await Student.findByIdAndUpdate(id, updateData, {
+      new: true,
+    });
 
-      if (!updatedStudent) {
-          return res.status(404).send('Student not found');
-      }
+    if (!updatedStudent) {
+      return res.status(404).send("Student not found");
+    }
 
-      res.redirect('/allStudent');
+    res.redirect("/allStudent");
   } catch (err) {
-      console.error('Error updating student:', err);
-      res.status(500).send('Internal Server Error');
+    console.error("Error updating student:", err);
+    res.status(500).send("Internal Server Error");
   }
 });
 
@@ -1445,6 +1511,69 @@ router.post("/deleteStudent", async (req, res) => {
   const maHocVien = req.body.MaHocVien;
   await Student.deleteOne({ MaHocVien: maHocVien });
   res.redirect("/allStudent");
+});
+
+router.post("/searchStudent", async (req, res) => {
+  const { mahocvien } = req.body;
+  const student = await Student.findOne({ MaHocVien: mahocvien }).lean();
+  res.json(student);
+});
+
+router.post("/submitStudentDateDAT", async (req, res) => {
+  const {
+    id,
+    MaHocVien,
+    HoTen,
+    KhoaHoc,
+    startDate,
+    endDate,
+    startDateB11,
+    endDateB11,
+  } = req.body;
+
+  const formatDate = (date) => {
+    const d = new Date(date);
+    let day = String(d.getDate()).padStart(2, "0");
+    let month = String(d.getMonth() + 1).padStart(2, "0");
+    let year = String(d.getFullYear()).slice(2);
+    return `${day}/${month}/${year}`;
+  };
+
+  if (id) {
+    const updateDate = {
+      MaHocVien: MaHocVien,
+      HoTen: HoTen,
+      KhoaHoc: KhoaHoc,
+      startDate: formatDate(startDate),
+      endDate: formatDate(endDate),
+      startDateB11:startDateB11 === "" ? "" : formatDate(startDateB11),
+      endDateB11: endDateB11 === "" ? "" : formatDate(endDateB11),
+    };
+    await studentDateDAT.findByIdAndUpdate(id, updateDate);
+  } else {
+    const newDate = new studentDateDAT({
+      MaHocVien: MaHocVien,
+      HoTen: HoTen,
+      KhoaHoc: KhoaHoc,
+      startDate: formatDate(startDate),
+      endDate: formatDate(endDate),
+      startDateB11: startDateB11 === "" ? "" : formatDate(startDateB11),
+      endDateB11: endDateB11 === "" ? "" : formatDate(endDateB11),
+    });
+    await newDate.save();
+  }
+  res.redirect("/studentDateDAT");
+});
+
+router.post("/deleteStudentDateDAT", async (req, res) => {
+  const { id } = req.body;
+  try {
+    await studentDateDAT.findByIdAndDelete(id);
+    res.redirect("studentDateDAT");
+  } catch (err) {
+    console.error("Error deleting date range:", err);
+    res.status(500).send("Error deleting date range");
+  }
 });
 
 function convertToISODate(dateStr) {
@@ -1477,14 +1606,14 @@ function formatTime(minutes) {
 
 const formatDateString = (date) => {
   const d = new Date(date);
-  let month = '' + (d.getMonth() + 1);
-  let day = '' + d.getDate();
+  let month = "" + (d.getMonth() + 1);
+  let day = "" + d.getDate();
   const year = d.getFullYear();
 
-  if (month.length < 2) month = '0' + month;
-  if (day.length < 2) day = '0' + day;
+  if (month.length < 2) month = "0" + month;
+  if (day.length < 2) day = "0" + day;
 
-  return [year, month, day].join('-');
+  return [year, month, day].join("-");
 };
 
 function formatInputTime(decimalHours) {

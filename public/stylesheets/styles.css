@@ -10962,11 +10962,12 @@ body {
   z-index: 1039;
 }
 .sb-topnav .navbar-brand {
-  width: 225px;
+  width: 200px;
   margin: 0;
 }
 .sb-topnav.navbar-dark #sidebarToggle {
   color: rgba(255, 255, 255, 0.5);
+  width: 0px;
 }
 .sb-topnav.navbar-light #sidebarToggle {
   color: #212529;

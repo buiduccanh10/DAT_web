@@ -1,0 +1,232 @@
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Date DAT</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/simple-datatables@7.1.2/dist/style.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      {{! .container {
+            margin: 50px auto;
+            padding: 30px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        } }}
+
+      h2 { text-align: center; margin-bottom: 20px; } .form-group {
+      margin-bottom: 15px; } label { display: block; margin-bottom: 5px; }
+      input[type="text"], input[type="date"], select { width: 100%; padding:
+      8px; border: 1px solid #ccc; border-radius: 5px; } .savedate { margin-top:
+      20px; display: block; padding: 10px; background-color: #007bff; color:
+      white; border: none; border-radius: 5px; width: 100%; } button:hover {
+      background-color: #0056b3; } .actions { display: flex; gap: 5px; }
+      .formdate { flex: 1; min-width: 300px; } .card { flex: 2; min-width:
+      300px; margin-bottom: 20px; } .card-header { font-weight: bold; }
+      .card-body { overflow-x: auto; } #datDateB11 { display: none; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <form class="formdate" action="/submitStudentDateDAT" method="post">
+        <h2>Đặt lịch chạy DAT cho học viên</h2>
+        <input type="text" id="id" name="id" hidden>
+        <div class="form-group">
+          <label for="MaHocVien">Mã học viên:</label>
+          <div style="display: flex;">
+            <input type="text" id="MaHocVien" name="MaHocVien" required />
+            <button id="searchStudent" type="button" class="btn btn-primary">🔍</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="HoTen">Họ và tên:</label>
+          <input type="text" id="HoTen" name="HoTen" required readonly/>
+        </div>
+        <div class="form-group">
+          <label for="KhoaHoc">Tên khoá học:</label>
+          <input type="text" id="KhoaHoc" name="KhoaHoc" required readonly/>
+        </div>
+        <div class="form-group">
+          <label for="startDate">Ngày bắt đầu:</label>
+          <input type="date" id="startDate" name="startDate" required />
+        </div>
+        <div class="form-group">
+          <label for="endDate">Ngày kết thúc:</label>
+          <input type="date" id="endDate" name="endDate" required />
+        </div>
+        <div class="form-group" id="datDateB11">
+          <div class="form-group">
+            <label for="startDateB11">Ngày bắt đầu B11:</label>
+            <input type="date" id="startDateB11" name="startDateB11" />
+          </div>
+          <div class="form-group">
+            <label for="endDateB11">Ngày kết thúc B11:</label>
+            <input type="date" id="endDateB11" name="endDateB11" />
+          </div>
+        </div>
+        <button class="savedate" type="submit">Lưu</button>
+      </form>
+
+      <div class="card">
+        <div class="card-header">
+          Bảng lịch DAT
+        </div>
+        <div class="card-body">
+          <table id="datatablesSimple1" class="table table-striped">
+            <thead>
+              <tr>
+                <th>Mã học viên</th>
+                <th>Tên học viên</th>
+                <th>Tên khoá</th>
+                <th>Ngày bắt đầu</th>
+                <th>Ngày kết thúc</th>
+                <th>Ngày bắt đầu B11</th>
+                <th>Ngày kết thúc B11</th>
+                <th>Hành động</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{#each studDateDAT}}
+              <input hidden id="idtable" value="{{this._id}}" />
+                <tr>
+                  <td>{{this.MaHocVien}}</td>
+                  <td>{{this.HoTen}}</td>
+                  <td>{{this.KhoaHoc}}</td>
+                  <td>{{this.startDate}}</td>
+                  <td>{{this.endDate}}</td>
+                  <td>
+                    {{#if this.startDateB11}}
+                      {{this.startDateB11}}
+                    {{else}}
+                      -
+                    {{/if}}
+                  </td>
+                  <td>
+                    {{#if this.endDateB11}}
+                      {{this.endDateB11}}
+                    {{else}}
+                      -
+                    {{/if}}
+                  </td>
+                  <td class="actions">
+                      <button type="button" class="btn btn-warning btn-sm edit-btn">Sửa</button>
+
+                    <form
+                      action="/deleteStudentDateDAT"
+                      method="post"
+                      style="display:inline;"
+                    >
+                      <input type="hidden" name="id" value="{{this._id}}" />
+                      <button
+                        type="submit"
+                        class="btn btn-danger btn-sm"
+                      >Xoá</button>
+                    </form>
+                  </td>
+                </tr>
+              {{/each}}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/simple-datatables@7.1.2/dist/umd/simple-datatables.min.js"
+      crossorigin="anonymous"
+    ></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+  var datatablesSimple1 = new simpleDatatables.DataTable("#datatablesSimple1");
+
+  document.getElementById("KhoaHoc").addEventListener("input", showB11);
+
+  document.querySelectorAll(".edit-btn").forEach((button, index) => {
+    button.addEventListener("click", function () {
+      var row = this.closest("tr"); // Get the closest row of the button
+      var cells = row.getElementsByTagName("td");
+
+      // Extract data from the row
+      var id = document.querySelectorAll("#idtable")[index];
+      var maHocVien = cells[0].innerText.trim();
+      var hoTen = cells[1].innerText.trim();
+      var khoaHoc = cells[2].innerText.trim();
+      var startDate = convertToISODate(cells[3].innerText.trim());
+      var endDate = convertToISODate(cells[4].innerText.trim());
+      var startDateB11 = cells[5].innerText.trim() !== "-" ? convertToISODate(cells[3].innerText.trim()) : "";
+      var endDateB11 = cells[6].innerText.trim() !== "-" ? convertToISODate(cells[4].innerText.trim()) : "";
+
+      // Populate the form fields
+      document.getElementById("id").value = id.value;
+      document.getElementById("MaHocVien").value = maHocVien;
+      document.getElementById("HoTen").value = hoTen;
+      document.getElementById("KhoaHoc").value = khoaHoc;
+      document.getElementById("startDate").value = startDate;
+      document.getElementById("endDate").value = endDate;
+      document.getElementById("startDateB11").value = startDateB11;
+      document.getElementById("endDateB11").value = endDateB11;
+
+      // Show or hide the B11 date fields
+      showB11();
+    });
+  });
+
+  document.getElementById("searchStudent").addEventListener("click", function (event) {
+    event.preventDefault();
+    var mahocvien = document.getElementById("MaHocVien").value;
+    
+    fetch("/searchStudent", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ mahocvien: mahocvien }),
+    })
+     .then((response) => response.json())
+     .then((data) => {
+        if (data !==null) {
+          document.getElementById("MaHocVien").value = data.MaHocVien;
+          document.getElementById("KhoaHoc").value = data.KhoaHoc;
+          document.getElementById("HoTen").value = data.HoTen;
+          showB11();
+        } else {
+          alert("Không tìm thấy học viên");
+        }
+      })
+     .catch((error) => console.error(error));
+  });
+});
+
+function showB11() {
+  var kh = document.getElementById("KhoaHoc").value;
+  var form = document.getElementById("datDateB11");
+
+  if (kh.includes("B2") || kh.includes("C")) {
+    form.style.display = "block";
+  } else {
+    form.style.display = "none";
+  }
+}
+
+function convertToISODate(dateStr) {
+  if (!dateStr || dateStr === "-") return "";
+  const [day, month, year] = dateStr.split("/");
+  return `20${year}-${month}-${day}`;
+}
+
+    </script>
+  </body>
+</html>
