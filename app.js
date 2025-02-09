@@ -10,11 +10,9 @@ var usersRouter = require("./routes/users");
 
 var app = express();
 
-//db
-//mongodb://my-mongodb-container:27017/DAT_web
 var uri = "mongodb://my-mongodb-container:27017/DAT_web";
-// var uri =
-//   "mongodb+srv://buiduccanh10:buiduccanh10@cluster0.rqr9q8a.mongodb.net/DAT_web";
+// var uri = "mongodb://localhost:27017/DAT_web"
+
 mongoose
   .connect(uri)
   .then(() => console.log("Connect db success"))

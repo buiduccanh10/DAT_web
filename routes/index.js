@@ -917,7 +917,7 @@ router.get("/computeData", async (req, res) => {
 
       updatedStudents.push({
         MaHocVien: studentId,
-        Anh: student ? student.Anh : "",
+        // Anh: student ? student.Anh : "",
         KhoaHoc: student.KhoaHoc,
         MaKhoaHoc: student.MaKhoaHoc,
         HoTen: student ? student.HoTen : "",
@@ -974,7 +974,7 @@ router.get("/computeData", async (req, res) => {
       if (!existingTotalHoTenSet.has(student.HoTen)) {
         const newTotal = new Total({
           MaHocVien: student.MaHocVien,
-          Anh: student.Anh,
+          // Anh: student.Anh,
           HoTen: student.HoTen,
           SoCMT: student.SoCMT,
           GioiTinh: student.GioiTinh,
