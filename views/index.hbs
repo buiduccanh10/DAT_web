@@ -85,6 +85,7 @@
                         <th>Mã học viên</th>
                         <th>Họ tên</th>
                         <th>Họ tên giáo viên</th>
+                        <th>Mã giáo viên</th>
                         <th>Xe tập lái</th>
                         <th>Ngày đào tạo</th>
                         <th>Thời gian</th>
@@ -101,6 +102,7 @@
                         <td>{{lookup this 'Mã học viên'}}</td>
                         <td>{{lookup this 'Họ và tên học viên'}}</td>
                         <td>{{lookup this 'Họ và tên giáo viên'}}</td>
+                        <td>{{lookup this 'Mã giáo viên'}}</td>
                         <td>{{lookup this 'Biển số Xe'}}</td>
                         <td>{{lookup this 'Thời gian bắt đầu phiên học'}}</td>
                         <td>{{lookup this 'Thời gian thực hành (giờ) (CSĐT truyền lên)'}}</td>
@@ -150,10 +152,11 @@
                     MaHocVien: row.cells[4].textContent,
                     HoTen: row.cells[5].textContent,
                     HoTenGiaoVien: row.cells[6].textContent,
-                    XeTapLai: row.cells[7].textContent,
-                    NgayDaoTao: row.cells[8].textContent,
-                    ThoiGian: row.cells[9].textContent,
-                    QuangDuong: row.cells[10].textContent,
+                    MaGiaoVien: row.cells[7].textContent,
+                    XeTapLai: row.cells[8].textContent,
+                    NgayDaoTao: row.cells[9].textContent,
+                    ThoiGian: row.cells[10].textContent,
+                    QuangDuong: row.cells[11].textContent,
                     TenDanhSachDAT: namelistss
                 };
                 data.push(rowData);

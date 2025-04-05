@@ -152,6 +152,7 @@ router.post("/save-dat", async (req, res) => {
         MaHocVien: row.MaHocVien,
         HoTen: row.HoTen,
         HoTenGiaoVien: row.HoTenGiaoVien,
+        MaGiaoVien: row.MaGiaoVien,
         XeTapLai: row.XeTapLai,
         NgayDaoTao: row.NgayDaoTao,
         ThoiGian: row.ThoiGian,
@@ -329,6 +330,7 @@ router.get("/save-dat-session", async (req, res) => {
         TiLe: item.TiLe,
         KhoaHoc: item.KhoaHoc,
         HoTenGiaoVien: item.HoTenGiaoVien,
+        MaGiaoVien: item.MaGiaoVien,
         XeTapLai: item.XeTapLai,
         NgayDaoTao: item.NgayDaoTao,
         ThoiGian: item.ThoiGian,
@@ -364,6 +366,7 @@ router.get("/save-dat-session", async (req, res) => {
         TiLe: item.TiLe,
         KhoaHoc: item.KhoaHoc,
         HoTenGiaoVien: item.HoTenGiaoVien,
+        MaGiaoVien: item.MaGiaoVien,
         XeTapLai: item.XeTapLai,
         NgayDaoTao: item.NgayDaoTao,
         ThoiGian: item.ThoiGian,
@@ -507,7 +510,7 @@ router.get("/save-dat-session", async (req, res) => {
 
   // Group sessions by teacher and date
   sessions.forEach((session) => {
-    const teacher = session.HoTenGiaoVien;
+    const teacher = session.MaGiaoVien;
     const date = moment(session.NgayDaoTao, "DD/MM/YY").format("DD/MM/YY");
     const startDateTime = moment(session.NgayDaoTao, "DD/MM/YY HH:mm");
     const endDateTime = startDateTime

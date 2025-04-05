@@ -8,6 +8,7 @@ const dat_sessionSchema = new mongoose.Schema({
   MaHocVien: String,
   HoTen: String,
   HoTenGiaoVien: String,
+  MaGiaoVien: String,
   XeTapLai: String,
   NgayDaoTao: String,
   ThoiGian: String,
