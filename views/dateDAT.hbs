@@ -170,11 +170,18 @@ function showB11() {
   var kh = document.getElementById("KhoaHoc").value;
   var form = document.getElementById("datDateB11");
 
-  if (kh.includes("B2") || kh.includes("C")) {
-    form.style.display = "block";
-  } else {
-    form.style.display = "none";
-  }
+  if (kh.includes("B1") || kh.includes("B.01")) {
+        form.style.display = "none";
+      }
+      else if (kh.includes("B2") || kh.includes("C")) {
+        form.style.display = "block";
+      }
+      else if (kh.includes("B")) {
+        form.style.display = "block";
+      }
+      else {
+        form.style.display = "none";
+      }
 }
 
 function convertToISODate(dateStr) {

@@ -269,7 +269,10 @@ router.get("/save-dat-session", async (req, res) => {
       isWithinMainSchedule = matchingDateDATs.some((dateDAT) => {
         const startDate = moment(dateDAT.startDate, "DD/MM/YY");
         const endDate = moment(dateDAT.endDate, "DD/MM/YY").endOf("day");
-        return sessionDate.isSameOrAfter(startDate) && sessionDate.isSameOrBefore(endDate);
+        return (
+          sessionDate.isSameOrAfter(startDate) &&
+          sessionDate.isSameOrBefore(endDate)
+        );
       });
     }
     if (!isWithinMainSchedule) {
@@ -281,11 +284,13 @@ router.get("/save-dat-session", async (req, res) => {
     if (
       matchingCar &&
       matchingCar.LoaiHangXe === "B11" &&
-      ngayDaoTao.isAfter(ketThucSang) &&
-      !item.KhoaHoc.includes("B1")
+      ngayDaoTao.isAfter(ketThucSang)
     ) {
-      lyDoLoaiList.push("Hạng của bạn không được đi B11 ban đêm");
-      item.TrangThai = true;
+      const kh = item.KhoaHoc;
+      if (!kh.includes("B.01") && !kh.includes("B11") && !kh.includes("B1")) {
+        lyDoLoaiList.push("Hạng của bạn không được đi B11 ban đêm");
+        item.TrangThai = true;
+      }
     }
 
     // Kiểm tra điều kiện TiLe và ThoiGian
@@ -309,45 +314,45 @@ router.get("/save-dat-session", async (req, res) => {
     // Kết hợp các lý do thành một chuỗi
     const lyDoLoai = lyDoLoaiList.join(", ");
 
-    if (
-      matchingCar &&
-      matchingCar.LoaiHangXe === "B11" &&
-      !item.KhoaHoc.includes("B1")
-    ) {
-      // Tạo một mục mới của Dat_session với các thông tin và lý do được cập nhật
-      const newItem = new Dat_session({
-        TrangThai:
-          tiLeLessThan75 ||
-          durationGreaterThanOrEqualTo4Hours ||
-          thoiGianPhut <= 5 ||scheduleViolation,
-        LyDoLoai: lyDoLoai,
-        ThoiGianXeTuDong: thoiGianPhut,
-        QuangDuongXeTuDong: parseFloat(item.QuangDuong),
-        TenDanhSachDAT: query,
-        HoTen: item.HoTen,
-        MaHocVien: item.MaHocVien,
-        MaPhien: item.MaPhien,
-        TiLe: item.TiLe,
-        KhoaHoc: item.KhoaHoc,
-        HoTenGiaoVien: item.HoTenGiaoVien,
-        MaGiaoVien: item.MaGiaoVien,
-        XeTapLai: item.XeTapLai,
-        NgayDaoTao: item.NgayDaoTao,
-        ThoiGian: item.ThoiGian,
-        QuangDuong: item.QuangDuong,
-        STT: item.STT,
-        TotalMorningTime: thoiGianSang,
-        TotalEveningTime: thoiGianToi,
-        TotalMorningDistance: quangDuongSang.toFixed(2),
-        TotalEveningDistance: quangDuongToi.toFixed(2),
-      });
+    if (matchingCar && matchingCar.LoaiHangXe === "B11") {
+      const kh = item.KhoaHoc;
+      if (!kh.includes("B.01") && !kh.includes("B11") && !kh.includes("B1")) {
+        // Tạo một mục mới của Dat_session với các thông tin và lý do được cập nhật
+        const newItem = new Dat_session({
+          TrangThai:
+            tiLeLessThan75 ||
+            durationGreaterThanOrEqualTo4Hours ||
+            thoiGianPhut <= 5 ||
+            scheduleViolation,
+          LyDoLoai: lyDoLoai,
+          ThoiGianXeTuDong: thoiGianPhut,
+          QuangDuongXeTuDong: parseFloat(item.QuangDuong),
+          TenDanhSachDAT: query,
+          HoTen: item.HoTen,
+          MaHocVien: item.MaHocVien,
+          MaPhien: item.MaPhien,
+          TiLe: item.TiLe,
+          KhoaHoc: item.KhoaHoc,
+          HoTenGiaoVien: item.HoTenGiaoVien,
+          MaGiaoVien: item.MaGiaoVien,
+          XeTapLai: item.XeTapLai,
+          NgayDaoTao: item.NgayDaoTao,
+          ThoiGian: item.ThoiGian,
+          QuangDuong: item.QuangDuong,
+          STT: item.STT,
+          TotalMorningTime: thoiGianSang,
+          TotalEveningTime: thoiGianToi,
+          TotalMorningDistance: quangDuongSang.toFixed(2),
+          TotalEveningDistance: quangDuongToi.toFixed(2),
+        });
 
-      // Lưu vào cơ sở dữ liệu
-      try {
-        await newItem.save();
-        sessions.push(newItem);
-      } catch (err) {
-        console.error("Error saving data:", err);
+        // Lưu vào cơ sở dữ liệu
+        try {
+          await newItem.save();
+          sessions.push(newItem);
+        } catch (err) {
+          console.error("Error saving data:", err);
+        }
       }
     } else {
       // Tạo một mục mới của Dat_session với các thông tin và lý do được cập nhật
@@ -355,7 +360,8 @@ router.get("/save-dat-session", async (req, res) => {
         TrangThai:
           tiLeLessThan75 ||
           durationGreaterThanOrEqualTo4Hours ||
-          thoiGianPhut <= 5 ||scheduleViolation,
+          thoiGianPhut <= 5 ||
+          scheduleViolation,
         LyDoLoai: lyDoLoai,
         ThoiGianXeTuDong: 0,
         QuangDuongXeTuDong: 0,
@@ -604,9 +610,7 @@ router.get("/save-dat-session", async (req, res) => {
         (s) => s.KhoaHoc === course && s.XeTapLai === vehicle
       );
       if (sampleSession) {
-        const matchingCar = cars.find(
-          (car) => car.BienSoXe === vehicle
-        );
+        const matchingCar = cars.find((car) => car.BienSoXe === vehicle);
         if (matchingCar && matchingCar.LoaiHangXe === "B11") {
           threshold = 35;
         }
@@ -850,11 +854,19 @@ router.get("/computeData", async (req, res) => {
       let reasons = [];
 
       studentSessions.forEach((session) => {
-        if (session.KhoaHoc.includes("B1")) {
+        const kh = session.KhoaHoc;
+        if (kh.includes("B.01") || kh.includes("B11")) {
           category = "B1";
-        } else if (session.KhoaHoc.includes("B2")) {
+        } else if (kh.includes("B2")) {
           category = "B2";
-        } else if (session.KhoaHoc.includes("C")) {
+        } else if (
+          kh.includes("B") &&
+          !kh.includes("B.01") &&
+          !kh.includes("B11") &&
+          !kh.includes("B1")
+        ) {
+          category = "B2";
+        } else if (kh.includes("C")) {
           category = "C";
         }
       });
@@ -966,11 +978,19 @@ router.get("/computeData", async (req, res) => {
     for (const student of students) {
       let category = "Unknown";
 
-      if (student.KhoaHoc.includes("B1")) {
+      const kh = student.KhoaHoc;
+      if (kh.includes("B.01") || kh.includes("B11")) {
         category = "B1";
-      } else if (student.KhoaHoc.includes("B2")) {
+      } else if (kh.includes("B2")) {
         category = "B2";
-      } else if (student.KhoaHoc.includes("C")) {
+      } else if (
+        kh.includes("B") &&
+        !kh.includes("B.01") &&
+        !kh.includes("B11") &&
+        !kh.includes("B1")
+      ) {
+        category = "B2";
+      } else if (kh.includes("C")) {
         category = "C";
       }
 
@@ -1484,11 +1504,12 @@ router.get("/editStudent", async (req, res) => {
 router.post("/updateStudent", async (req, res) => {
   try {
     const id = req.body.id;
+    const khoaHoc = req.body.KhoaHoc;
 
     const updateData = {
       MaHocVien: req.body.MaHocVien,
-      KhoaHoc: req.body.KhoaHoc,
-      MaKhoaHoc: "30012" + req.body.KhoaHoc,
+      KhoaHoc: khoaHoc,
+      MaKhoaHoc: "30012" + khoaHoc,
       HoTen: req.body.HoTen,
       NgaySinh: formatDateString(req.body.NgaySinh),
       GioiTinh: req.body.GioiTinh,
@@ -1549,7 +1570,7 @@ router.post("/submitStudentDateDAT", async (req, res) => {
       KhoaHoc: KhoaHoc,
       startDate: formatDate(startDate),
       endDate: formatDate(endDate),
-      startDateB11:startDateB11 === "" ? "" : formatDate(startDateB11),
+      startDateB11: startDateB11 === "" ? "" : formatDate(startDateB11),
       endDateB11: endDateB11 === "" ? "" : formatDate(endDateB11),
     };
     await studentDateDAT.findByIdAndUpdate(id, updateDate);
