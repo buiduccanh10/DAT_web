@@ -314,83 +314,45 @@ router.get("/save-dat-session", async (req, res) => {
     // Kết hợp các lý do thành một chuỗi
     const lyDoLoai = lyDoLoaiList.join(", ");
 
-    if (matchingCar && matchingCar.LoaiHangXe === "B11") {
-      const kh = item.KhoaHoc;
-      if (!kh.includes("B.01") && !kh.includes("B11") && !kh.includes("B1")) {
-        // Tạo một mục mới của Dat_session với các thông tin và lý do được cập nhật
-        const newItem = new Dat_session({
-          TrangThai:
-            tiLeLessThan75 ||
-            durationGreaterThanOrEqualTo4Hours ||
-            thoiGianPhut <= 5 ||
-            scheduleViolation,
-          LyDoLoai: lyDoLoai,
-          ThoiGianXeTuDong: thoiGianPhut,
-          QuangDuongXeTuDong: parseFloat(item.QuangDuong),
-          TenDanhSachDAT: query,
-          HoTen: item.HoTen,
-          MaHocVien: item.MaHocVien,
-          MaPhien: item.MaPhien,
-          TiLe: item.TiLe,
-          KhoaHoc: item.KhoaHoc,
-          HoTenGiaoVien: item.HoTenGiaoVien,
-          MaGiaoVien: item.MaGiaoVien,
-          XeTapLai: item.XeTapLai,
-          NgayDaoTao: item.NgayDaoTao,
-          ThoiGian: item.ThoiGian,
-          QuangDuong: item.QuangDuong,
-          STT: item.STT,
-          TotalMorningTime: thoiGianSang,
-          TotalEveningTime: thoiGianToi,
-          TotalMorningDistance: quangDuongSang.toFixed(2),
-          TotalEveningDistance: quangDuongToi.toFixed(2),
-        });
+    // Create new Dat_session record for all cases
+    const newItem = new Dat_session({
+      TrangThai:
+        tiLeLessThan75 ||
+        durationGreaterThanOrEqualTo4Hours ||
+        thoiGianPhut <= 5 ||
+        scheduleViolation,
+      LyDoLoai: lyDoLoai,
+      ThoiGianXeTuDong:
+        matchingCar && matchingCar.LoaiHangXe === "B11" ? thoiGianPhut : 0,
+      QuangDuongXeTuDong:
+        matchingCar && matchingCar.LoaiHangXe === "B11"
+          ? parseFloat(item.QuangDuong)
+          : 0,
+      TenDanhSachDAT: query,
+      HoTen: item.HoTen,
+      MaHocVien: item.MaHocVien,
+      MaPhien: item.MaPhien,
+      TiLe: item.TiLe,
+      KhoaHoc: item.KhoaHoc,
+      HoTenGiaoVien: item.HoTenGiaoVien,
+      MaGiaoVien: item.MaGiaoVien,
+      XeTapLai: item.XeTapLai,
+      NgayDaoTao: item.NgayDaoTao,
+      ThoiGian: item.ThoiGian,
+      QuangDuong: item.QuangDuong,
+      STT: item.STT,
+      TotalMorningTime: thoiGianSang,
+      TotalEveningTime: thoiGianToi,
+      TotalMorningDistance: quangDuongSang.toFixed(2),
+      TotalEveningDistance: quangDuongToi.toFixed(2),
+    });
 
-        // Lưu vào cơ sở dữ liệu
-        try {
-          await newItem.save();
-          sessions.push(newItem);
-        } catch (err) {
-          console.error("Error saving data:", err);
-        }
-      }
-    } else {
-      // Tạo một mục mới của Dat_session với các thông tin và lý do được cập nhật
-      const newItem = new Dat_session({
-        TrangThai:
-          tiLeLessThan75 ||
-          durationGreaterThanOrEqualTo4Hours ||
-          thoiGianPhut <= 5 ||
-          scheduleViolation,
-        LyDoLoai: lyDoLoai,
-        ThoiGianXeTuDong: 0,
-        QuangDuongXeTuDong: 0,
-        TenDanhSachDAT: query,
-        HoTen: item.HoTen,
-        MaHocVien: item.MaHocVien,
-        MaPhien: item.MaPhien,
-        TiLe: item.TiLe,
-        KhoaHoc: item.KhoaHoc,
-        HoTenGiaoVien: item.HoTenGiaoVien,
-        MaGiaoVien: item.MaGiaoVien,
-        XeTapLai: item.XeTapLai,
-        NgayDaoTao: item.NgayDaoTao,
-        ThoiGian: item.ThoiGian,
-        QuangDuong: item.QuangDuong,
-        STT: item.STT,
-        TotalMorningTime: thoiGianSang,
-        TotalEveningTime: thoiGianToi,
-        TotalMorningDistance: quangDuongSang.toFixed(2),
-        TotalEveningDistance: quangDuongToi.toFixed(2),
-      });
-
-      // Lưu vào cơ sở dữ liệu
-      try {
-        await newItem.save();
-        sessions.push(newItem);
-      } catch (err) {
-        console.error("Error saving data:", err);
-      }
+    // Save to database
+    try {
+      await newItem.save();
+      sessions.push(newItem);
+    } catch (err) {
+      console.error("Error saving data:", err);
     }
   }
 
@@ -665,13 +627,13 @@ router.post("/uploadxml", upload.array("files", 15), (req, res) => {
     return new Promise((resolve, reject) => {
       const filePath = file.path;
 
-      const fileName = path.basename(
-        file.originalname,
-        path.extname(file.originalname)
-      );
-      const parts = fileName.split("_");
-      const maKhoaHoc = parts[3]; // Extract the full course code
-      const khoaHoc = maKhoaHoc.substring(maKhoaHoc.indexOf("K"));
+      // const fileName = path.basename(
+      //   file.originalname,
+      //   path.extname(file.originalname)
+      // );
+      // const parts = fileName.split("_");
+      // const maKhoaHoc = parts[3]; // Extract the full course code
+      // const khoaHoc = maKhoaHoc.substring(maKhoaHoc.indexOf("K"));
 
       // Read and parse the XML file
       fs.readFile(filePath, "utf8", (err, data) => {
@@ -683,6 +645,9 @@ router.post("/uploadxml", upload.array("files", 15), (req, res) => {
           if (err) {
             return reject("Error parsing XML");
           }
+
+          const khoaHoc = result.BAO_CAO1.DATA[0].KHOA_HOC[0].TEN_KHOA_HOC[0];
+          const maKhoaHoc = result.BAO_CAO1.DATA[0].KHOA_HOC[0].MA_KHOA_HOC[0];
 
           // Assuming the XML structure, convert it to a usable format
           const dataFromXml = result.BAO_CAO1.DATA[0].NGUOI_LXS[0].NGUOI_LX.map(
