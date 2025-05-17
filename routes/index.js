@@ -300,6 +300,12 @@ router.get("/save-dat-session", async (req, res) => {
       item["ThoiGian"]
     );
 
+    // Tính toán tốc độ km/h
+    const thoiGianGio = thoiGianPhut / 60;
+    const tocDo = parseFloat(item.QuangDuong) / thoiGianGio;
+    const isClassC = item.KhoaHoc.includes("C");
+    const tocDoQuaNhanh = !isClassC && Math.floor(tocDo) > 60;
+
     // Kiểm tra các điều kiện và thêm lý do vào mảng
     if (tiLeLessThan75) {
       lyDoLoaiList.push("Tỉ lệ dưới 75%");
@@ -309,6 +315,9 @@ router.get("/save-dat-session", async (req, res) => {
     }
     if (thoiGianPhut <= 5) {
       lyDoLoaiList.push("Chưa đạt thời gian tối thiểu");
+    }
+    if (!isClassC && Math.floor(tocDo) > 60) {
+      lyDoLoaiList.push("Tốc độ vượt quá 60km/h");
     }
 
     // Kết hợp các lý do thành một chuỗi
@@ -320,7 +329,8 @@ router.get("/save-dat-session", async (req, res) => {
         tiLeLessThan75 ||
         durationGreaterThanOrEqualTo4Hours ||
         thoiGianPhut <= 5 ||
-        scheduleViolation,
+        scheduleViolation ||
+        tocDoQuaNhanh,
       LyDoLoai: lyDoLoai,
       ThoiGianXeTuDong:
         matchingCar && matchingCar.LoaiHangXe === "B11" ? thoiGianPhut : 0,
