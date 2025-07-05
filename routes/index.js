@@ -515,6 +515,30 @@ router.get("/save-dat-session", async (req, res) => {
 
   for (const [teacher, dateMap] of teacherMap.entries()) {
     for (const [date, sessions] of dateMap.entries()) {
+      // Check if teacher exceeds 12 hours per day
+      let totalTeachingTimePerDay = 0;
+      sessions.forEach((sessionData) => {
+        totalTeachingTimePerDay += parseDuration(sessionData.session.ThoiGian);
+      });
+
+      if (totalTeachingTimePerDay > 720) {
+        // 720 minutes = 12 hours
+        const reason = `Giáo viên dạy quá 12 tiếng trong ngày ${date}`;
+        sessions.forEach((sessionData) => {
+          const session = sessionData.session;
+          session.TrangThai = true;
+          if (session.LyDoLoai) {
+            if (!session.LyDoLoai.includes(reason)) {
+              session.LyDoLoai += `, ${reason}`;
+            }
+          } else {
+            session.LyDoLoai = reason;
+          }
+          updates.push(session);
+        });
+      }
+
+      // Check for overlapping sessions (existing code)
       for (let i = 0; i < sessions.length; i++) {
         for (let j = i + 1; j < sessions.length; j++) {
           const session1 = sessions[i];
@@ -572,37 +596,37 @@ router.get("/save-dat-session", async (req, res) => {
     courseVehicleGroups[course][vehicle].add(session.MaHocVien);
   });
 
-  // Kiểm tra từng nhóm
+  // Kiểm tra từng nhóm - chỉ áp dụng cho xe B11
   for (const course in courseVehicleGroups) {
     for (const vehicle in courseVehicleGroups[course]) {
       const studentCount = courseVehicleGroups[course][vehicle].size;
-      // Xác định ngưỡng: nếu xe thuộc loại B11 thì cho tối đa 35, ngược lại (B2) cho 5
-      let threshold = 5;
       const sampleSession = sessions.find(
         (s) => s.KhoaHoc === course && s.XeTapLai === vehicle
       );
+
+      // Chỉ kiểm tra giới hạn cho xe B11 (35 học viên)
       if (sampleSession) {
         const matchingCar = cars.find((car) => car.BienSoXe === vehicle);
-        if (matchingCar && matchingCar.LoaiHangXe === "B11") {
-          threshold = 35;
-        }
-      }
-      // Nếu số học viên vượt quá ngưỡng, cập nhật các phiên của nhóm này
-      if (studentCount > threshold) {
-        const violationReason = `Xe ${vehicle} trong khóa học ${course} chỉ cho phép tối đa ${threshold} học viên, hiện có ${studentCount} học viên`;
-        sessions.forEach((session) => {
-          if (session.KhoaHoc === course && session.XeTapLai === vehicle) {
-            session.TrangThai = true;
-            if (session.LyDoLoai) {
-              if (!session.LyDoLoai.includes(violationReason)) {
-                session.LyDoLoai += `, ${violationReason}`;
+        if (
+          matchingCar &&
+          matchingCar.LoaiHangXe === "B11" &&
+          studentCount > 35
+        ) {
+          const violationReason = `Xe ${vehicle} trong khóa học ${course} chỉ cho phép tối đa 35 học viên, hiện có ${studentCount} học viên`;
+          sessions.forEach((session) => {
+            if (session.KhoaHoc === course && session.XeTapLai === vehicle) {
+              session.TrangThai = true;
+              if (session.LyDoLoai) {
+                if (!session.LyDoLoai.includes(violationReason)) {
+                  session.LyDoLoai += `, ${violationReason}`;
+                }
+              } else {
+                session.LyDoLoai = violationReason;
               }
-            } else {
-              session.LyDoLoai = violationReason;
+              updates.push(session);
             }
-            updates.push(session);
-          }
-        });
+          });
+        }
       }
     }
   }
