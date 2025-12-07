@@ -875,22 +875,21 @@ router.get("/computeData", async (req, res) => {
         if (data.totalDuration < 720) reasons.push("Thời gian chưa đạt 12 giờ");
         if (data.totalDistance < 710)
           reasons.push("Quãng đường chưa đạt 710km");
-        if (data.totalEveningTime < 240)
-          reasons.push("Thời gian tối chưa đạt 4 giờ");
+        if (data.totalEveningTime < 150)
+          reasons.push("Thời gian tối chưa đạt 2.5 giờ");
         if (data.totalEveningDistance < 110)
           reasons.push("Quãng đường tối chưa đạt 110km");
         studentStatus = reasons.length > 0;
       } else if (category === "B2") {
-        if (data.TongThoiGianB11 < 192)
-          reasons.push("Chưa đi đủ thời gian B11");
+        if (data.TongThoiGianB11 < 90) reasons.push("Chưa đi đủ thời gian B11");
         if (data.TongQuangDuongB11 < 110)
           reasons.push("Chưa đi đủ quãng đường B11");
         if (data.totalDuration < 1200)
           reasons.push("Thời gian chưa đạt 20 giờ");
         if (data.totalDistance < 810)
           reasons.push("Quãng đường chưa đạt 810km");
-        if (data.totalEveningTime < 240)
-          reasons.push("Thời gian tối chưa đạt 4 giờ");
+        if (data.totalEveningTime < 150)
+          reasons.push("Thời gian tối chưa đạt 2.5 giờ");
         if (data.totalEveningDistance < 140)
           reasons.push("Quãng đường tối chưa đạt 140km");
         studentStatus = reasons.length > 0;
