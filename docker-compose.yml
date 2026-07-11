@@ -1,0 +1,31 @@
+services:
+  # MongoDB — service name khớp với hostname trong app.js
+  # (mongodb://my-mongodb-container:27017/DAT_web) nên không cần đổi code.
+  my-mongodb-container:
+    image: mongo:latest
+    container_name: my-mongodb-container
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: DAT_web
+    volumes:
+      - mongodb_data:/data/db
+    restart: unless-stopped
+
+  # Express app — build từ Dockerfile ở thư mục hiện tại.
+  app:
+    build: .
+    container_name: my-express-app
+    ports:
+      # host 3000 -> container 4000 (app.js lắng nghe ở PORT || 4000)
+      - "3000:4000"
+    environment:
+      - PORT=4000
+      # Có thể ghi đè URI nếu muốn; mặc định trong app.js vẫn dùng my-mongodb-container.
+      - MONGODB_URI=mongodb://my-mongodb-container:27017/DAT_web
+    depends_on:
+      - my-mongodb-container
+    restart: unless-stopped
+
+volumes:
+  mongodb_data:

@@ -10,8 +10,8 @@ COPY . /app
 # Install dependencies based on package.json
 RUN npm install
 
-# Expose port 3000 for the application
-EXPOSE 3000
+# Expose port 4000 for the application (app.js lắng nghe PORT || 4000)
+EXPOSE 4000
 
 # Start the application
 CMD ["npm", "start"]

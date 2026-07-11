@@ -61,9 +61,7 @@ app.use(function (err, req, res, next) {
   res.render("error");
 });
 
-const port = process.env.PORT || 4000;
-app.listen(port, '0.0.0.0',() => {
-  console.log(`App listening on port ${port}`);
-});
-
+// Lưu ý: KHÔNG gọi app.listen() ở đây.
+// Việc listen do bin/www đảm nhận (theo convention Express generator),
+// tránh lỗi EADDRINUSE khi PORT bị trùng.
 module.exports = app;
