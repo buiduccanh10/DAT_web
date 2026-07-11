@@ -329,10 +329,11 @@ router.get("/save-dat-session", async (req, res) => {
 
     // Tính toán tốc độ km/h
     const thoiGianGio = thoiGianPhut / 60;
-    const tocDo = parseFloat(item.QuangDuong) / thoiGianGio;
+    const tocDo = thoiGianGio > 0 ? parseFloat(item.QuangDuong) / thoiGianGio : 0;
     const category = mapCategory(item.LoaiKhoaHoc, item.KhoaHoc);
     const isClassC = category === "C";
     const tocDoQuaNhanh = !isClassC && Math.floor(tocDo) > 60;
+    const tocDoQuaNhe = tocDo > 0 && tocDo < 25;
 
     // Kiểm tra các điều kiện và thêm lý do vào mảng
     if (tiLeLessThan75) {
@@ -347,6 +348,9 @@ router.get("/save-dat-session", async (req, res) => {
     if (!isClassC && Math.floor(tocDo) > 60) {
       lyDoLoaiList.push("Tốc độ vượt quá 60km/h");
     }
+    if (tocDoQuaNhe) {
+      lyDoLoaiList.push("Tốc độ dưới 25km/h");
+    }
 
     // Kết hợp các lý do thành một chuỗi
     const lyDoLoai = lyDoLoaiList.join(", ");
@@ -358,7 +362,8 @@ router.get("/save-dat-session", async (req, res) => {
         durationGreaterThanOrEqualTo4Hours ||
         thoiGianPhut <= 5 ||
         scheduleViolation ||
-        tocDoQuaNhanh,
+        tocDoQuaNhanh ||
+        tocDoQuaNhe,
       LyDoLoai: lyDoLoai,
       ThoiGianBanDem: thoiGianToi,
       ThoiGianXeTuDong: thoiGianXeTuDong,
