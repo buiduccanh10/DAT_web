@@ -81,15 +81,20 @@
                         <th>STT</th>
                         <th>Mã Phiên</th>
                         <th>Tỉ lệ</th>
-                        <th>Khóa học</th>
+                        <th>Mã khóa học</th>
+                        <th>Tên Khóa học</th>
+                        <th>Loại khóa học</th>
                         <th>Mã học viên</th>
                         <th>Họ tên</th>
                         <th>Họ tên giáo viên</th>
                         <th>Mã giáo viên</th>
                         <th>Xe tập lái</th>
                         <th>Ngày đào tạo</th>
+                        <th>Kết thúc phiên</th>
                         <th>Thời gian</th>
                         <th>Quãng đường</th>
+                        <th>Giờ lái đêm</th>
+                        <th>Giờ xe tự động</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -98,15 +103,20 @@
                         <td>{{lookup this 'STT'}}</td>
                         <td>{{lookup this 'Mã phiên học'}}</td>
                         <td>{{lookup this 'Tỉ lệ nhận diện'}}</td>
-                        <td>{{lookup this 'Tên Khóa học'}}</td>
+                        <td>{{lookup this 'Mã khóa học'}}</td>
+                        <td>{{lookup this 'Tên khóa học'}}</td>
+                        <td>{{lookup this 'Loại khóa học'}}</td>
                         <td>{{lookup this 'Mã học viên'}}</td>
                         <td>{{lookup this 'Họ và tên học viên'}}</td>
                         <td>{{lookup this 'Họ và tên giáo viên'}}</td>
                         <td>{{lookup this 'Mã giáo viên'}}</td>
-                        <td>{{lookup this 'Biển số Xe'}}</td>
+                        <td>{{lookup this 'Biển số xe'}}</td>
                         <td>{{lookup this 'Thời gian bắt đầu phiên học'}}</td>
+                        <td>{{lookup this 'Thời gian kết thúc phiên học'}}</td>
                         <td>{{lookup this 'Thời gian thực hành (giờ) (CSĐT truyền lên)'}}</td>
                         <td>{{lookup this 'Quãng đường thực hành (km) (CSĐT truyền lên)'}}</td>
+                        <td>{{lookup this 'Thời gian lái xe ban đêm (giờ)'}}</td>
+                        <td>{{lookup this 'Thời gian lái xe số tự động (nếu có)'}}</td>
                     </tr>
                     {{/each}}
                 </tbody>
@@ -148,15 +158,20 @@
                     STT: row.cells[0].textContent,
                     MaPhien: row.cells[1].textContent,
                     TiLe: row.cells[2].textContent,
-                    KhoaHoc: row.cells[3].textContent,
-                    MaHocVien: row.cells[4].textContent,
-                    HoTen: row.cells[5].textContent,
-                    HoTenGiaoVien: row.cells[6].textContent,
-                    MaGiaoVien: row.cells[7].textContent,
-                    XeTapLai: row.cells[8].textContent,
-                    NgayDaoTao: row.cells[9].textContent,
-                    ThoiGian: row.cells[10].textContent,
-                    QuangDuong: row.cells[11].textContent,
+                    MaKhoaHoc: row.cells[3].textContent,
+                    KhoaHoc: row.cells[4].textContent,
+                    LoaiKhoaHoc: row.cells[5].textContent,
+                    MaHocVien: row.cells[6].textContent,
+                    HoTen: row.cells[7].textContent,
+                    HoTenGiaoVien: row.cells[8].textContent,
+                    MaGiaoVien: row.cells[9].textContent,
+                    XeTapLai: row.cells[10].textContent,
+                    NgayDaoTao: row.cells[11].textContent,
+                    ThoiGianKetThuc: row.cells[12].textContent,
+                    ThoiGian: row.cells[13].textContent,
+                    QuangDuong: row.cells[14].textContent,
+                    ThoiGianBanDem: row.cells[15].textContent,
+                    ThoiGianXeTuDong: row.cells[16].textContent,
                     TenDanhSachDAT: namelistss
                 };
                 data.push(rowData);

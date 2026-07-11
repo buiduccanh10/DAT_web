@@ -84,13 +84,44 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
+// File DAT mới có nhiều sheet, sheet đầu có thể chỉ chứa dòng tiêu đề (meta).
+// Chọn sheet đầu tiên có cả cột "STT" và "Mã phiên học" sau khi chuẩn hoá key.
+function pickDataSheet(workbook) {
+  for (const name of workbook.SheetNames) {
+    const sheet = workbook.Sheets[name];
+    const rows = xlsx.utils.sheet_to_json(sheet);
+    if (rows.length === 0) continue;
+    const keys = Object.keys(normalizeRow(rows[0]));
+    if (keys.includes("STT") && keys.includes("Mã phiên học")) {
+      return rows;
+    }
+  }
+  // Fallback: sheet đầu tiên
+  return xlsx.utils.sheet_to_json(
+    workbook.Sheets[workbook.SheetNames[0]]
+  );
+}
+
+// Chuẩn hoá key: bỏ ký tự xuống dòng (\n) và rút gọn khoảng trắng dư.
+// File DAT mới chứa tiêu đề cột có \n (vd "Thời gian bắt đầu\nphiên học").
+function normalizeRow(row) {
+  const out = {};
+  for (const key of Object.keys(row)) {
+    const cleanKey = key.replace(/\n/g, " ").replace(/\s+/g, " ").trim();
+    out[cleanKey] = row[key];
+  }
+  return out;
+}
+
 router.post("/upload", upload.single("file"), (req, res) => {
   const filePath = req.file.path;
 
   // Đọc file Excel với tùy chọn cellDates: true
   const workbook = xlsx.readFile(filePath, { cellDates: true });
-  const sheet = workbook.Sheets[workbook.SheetNames[0]];
-  let data = xlsx.utils.sheet_to_json(sheet);
+  let data = pickDataSheet(workbook);
+
+  // Chuẩn hoá toàn bộ key của mỗi dòng
+  data = data.map(normalizeRow);
 
   data = data.map((row) => {
     if (row["Thời gian bắt đầu phiên học"] instanceof Date) {
@@ -101,6 +132,17 @@ router.post("/upload", upload.single("file"), (req, res) => {
       row["Thời gian thực hành (giờ) (CSĐT truyền lên)"] = formatInputTime(
         row["Thời gian thực hành (giờ) (CSĐT truyền lên)"]
       );
+    }
+    // Các cột mới của file DAT
+    if (row["Thời gian kết thúc phiên học"] instanceof Date) {
+      row["Thời gian kết thúc phiên học"] = moment(
+        row["Thời gian kết thúc phiên học"]
+      ).format("DD/MM/YY HH:mm");
+    }
+    if (row["Thời gian máy chủ nhận phiên học"] instanceof Date) {
+      row["Thời gian máy chủ nhận phiên học"] = moment(
+        row["Thời gian máy chủ nhận phiên học"]
+      ).format("DD/MM/YY HH:mm");
     }
     return row;
   });
@@ -149,14 +191,19 @@ router.post("/save-dat", async (req, res) => {
         MaPhien: row.MaPhien,
         TiLe: row.TiLe,
         KhoaHoc: row.KhoaHoc,
+        MaKhoaHoc: row.MaKhoaHoc,
+        LoaiKhoaHoc: row.LoaiKhoaHoc,
         MaHocVien: row.MaHocVien,
         HoTen: row.HoTen,
         HoTenGiaoVien: row.HoTenGiaoVien,
         MaGiaoVien: row.MaGiaoVien,
         XeTapLai: row.XeTapLai,
         NgayDaoTao: row.NgayDaoTao,
+        ThoiGianKetThuc: row.ThoiGianKetThuc,
         ThoiGian: row.ThoiGian,
         QuangDuong: row.QuangDuong,
+        ThoiGianBanDem: row.ThoiGianBanDem,
+        ThoiGianXeTuDong: row.ThoiGianXeTuDong,
         TenDanhSachDAT: row.TenDanhSachDAT,
       });
 
@@ -202,57 +249,36 @@ router.get("/save-dat-session", async (req, res) => {
       parseInt(item.ThoiGian.split("h")[0]) * 60 +
       parseInt(item.ThoiGian.split("h")[1]);
 
-    // Tính toán thời gian sáng, thời gian tối, và quãng đường sáng/tối
-    let thoiGianSang = 0;
-    let thoiGianToi = 0;
-    let quangDuongSang = 0;
+    // Đọc thời gian lái xe ban đêm trực tiếp từ file DAT (giờ thập phân -> phút)
+    const thoiGianBanDemGio = parseFloat(item.ThoiGianBanDem) || 0;
+    const thoiGianToi = Math.round(thoiGianBanDemGio * 60);
+    const thoiGianSang = Math.max(thoiGianPhut - thoiGianToi, 0);
+
+    // Quãng đường sáng/tối chia theo tỉ lệ thời gian (file không có cột km đêm riêng)
+    const tongQuangDuong = parseFloat(item.QuangDuong) || 0;
     let quangDuongToi = 0;
-
-    // Kiểm tra xem NgayDaoTao + ThoiGian nằm trong khoảng thời gian sáng hay tối không
-    const ngayDaoTao = moment(item.NgayDaoTao, "DD/MM/YY HH:mm");
-
-    let ketThucSang;
-    if (moment(ngayDaoTao).isBefore("2024-06-01")) {
-      ketThucSang = moment(ngayDaoTao).set({
-        hour: 19,
-        minute: 0,
-        second: 0,
-      });
-    } else {
-      ketThucSang = moment(ngayDaoTao).set({
-        hour: 18,
-        minute: 0,
-        second: 0,
-      });
+    let quangDuongSang = 0;
+    if (thoiGianPhut > 0) {
+      quangDuongToi = (tongQuangDuong * thoiGianToi) / thoiGianPhut;
+      quangDuongSang = tongQuangDuong - quangDuongToi;
     }
 
-    const ketThucToi = moment(ngayDaoTao).add(thoiGianPhut, "minutes");
-
-    // chia sang toi thoi
-    if (ngayDaoTao.isAfter(ketThucSang)) {
-      // Toàn bộ thời gian là thời gian tối
-      thoiGianToi = thoiGianPhut;
-      quangDuongToi = parseFloat(item.QuangDuong);
-    } else if (ketThucSang.isBefore(ketThucToi)) {
-      // Thời gian sáng
-      thoiGianSang = ketThucSang.diff(ngayDaoTao, "minutes");
-      quangDuongSang =
-        (parseFloat(item.QuangDuong) * thoiGianSang) / thoiGianPhut;
-
-      // Thời gian tối
-      thoiGianToi = thoiGianPhut - thoiGianSang;
-      quangDuongToi = parseFloat(item.QuangDuong) - quangDuongSang;
-    } else {
-      // Thời gian toàn bộ là thời gian sáng
-      thoiGianSang = thoiGianPhut;
-      quangDuongSang = parseFloat(item.QuangDuong);
-    }
+    // Đọc thời gian lái xe số tự động trực tiếp từ file DAT (giờ thập phân -> phút)
+    const thoiGianXeTuDongGio = parseFloat(item.ThoiGianXeTuDong) || 0;
+    const thoiGianXeTuDong = Math.round(thoiGianXeTuDongGio * 60);
+    // Quãng đường xe tự động chia theo tỉ lệ thời gian tự động / tổng thời gian
+    const quangDuongXeTuDong =
+      thoiGianPhut > 0
+        ? (tongQuangDuong * thoiGianXeTuDong) / thoiGianPhut
+        : 0;
 
     // Thêm thông tin tính toán vào mục dữ liệu
     item.TotalMorningTime = thoiGianSang;
     item.TotalEveningTime = thoiGianToi;
     item.TotalMorningDistance = quangDuongSang.toFixed(2);
     item.TotalEveningDistance = quangDuongToi.toFixed(2);
+
+    const ngayDaoTao = moment(item.NgayDaoTao, "DD/MM/YY HH:mm");
 
     const matchingCar = cars.find((car) => car.BienSoXe === item.XeTapLai);
     // Tạo một mảng để lưu trữ các lý do
@@ -281,13 +307,14 @@ router.get("/save-dat-session", async (req, res) => {
     }
     const scheduleViolation = !isWithinMainSchedule;
 
+    // Kiểm tra học viên hạng không phải B1 đi xe B11 (số tự động) vào ban đêm
     if (
       matchingCar &&
       matchingCar.LoaiHangXe === "B11" &&
-      ngayDaoTao.isAfter(ketThucSang)
+      thoiGianToi > 0
     ) {
-      const kh = item.KhoaHoc;
-      if (!kh.includes("B.01") && !kh.includes("B11") && !kh.includes("B1")) {
+      const category = mapCategory(item.LoaiKhoaHoc, item.KhoaHoc);
+      if (category !== "B1") {
         lyDoLoaiList.push("Hạng của bạn không được đi B11 ban đêm");
         item.TrangThai = true;
       }
@@ -303,7 +330,8 @@ router.get("/save-dat-session", async (req, res) => {
     // Tính toán tốc độ km/h
     const thoiGianGio = thoiGianPhut / 60;
     const tocDo = parseFloat(item.QuangDuong) / thoiGianGio;
-    const isClassC = item.KhoaHoc.includes("C");
+    const category = mapCategory(item.LoaiKhoaHoc, item.KhoaHoc);
+    const isClassC = category === "C";
     const tocDoQuaNhanh = !isClassC && Math.floor(tocDo) > 60;
 
     // Kiểm tra các điều kiện và thêm lý do vào mảng
@@ -332,22 +360,22 @@ router.get("/save-dat-session", async (req, res) => {
         scheduleViolation ||
         tocDoQuaNhanh,
       LyDoLoai: lyDoLoai,
-      ThoiGianXeTuDong:
-        matchingCar && matchingCar.LoaiHangXe === "B11" ? thoiGianPhut : 0,
-      QuangDuongXeTuDong:
-        matchingCar && matchingCar.LoaiHangXe === "B11"
-          ? parseFloat(item.QuangDuong)
-          : 0,
+      ThoiGianBanDem: thoiGianToi,
+      ThoiGianXeTuDong: thoiGianXeTuDong,
+      QuangDuongXeTuDong: quangDuongXeTuDong,
       TenDanhSachDAT: query,
       HoTen: item.HoTen,
       MaHocVien: item.MaHocVien,
       MaPhien: item.MaPhien,
       TiLe: item.TiLe,
       KhoaHoc: item.KhoaHoc,
+      MaKhoaHoc: item.MaKhoaHoc,
+      LoaiKhoaHoc: item.LoaiKhoaHoc,
       HoTenGiaoVien: item.HoTenGiaoVien,
       MaGiaoVien: item.MaGiaoVien,
       XeTapLai: item.XeTapLai,
       NgayDaoTao: item.NgayDaoTao,
+      ThoiGianKetThuc: item.ThoiGianKetThuc,
       ThoiGian: item.ThoiGian,
       QuangDuong: item.QuangDuong,
       STT: item.STT,
@@ -852,22 +880,10 @@ router.get("/computeData", async (req, res) => {
       let category = "Unknown";
       let reasons = [];
 
+      // Phân hạng theo "Loại khóa học" (ưu tiên), fallback theo tên khóa học
       studentSessions.forEach((session) => {
-        const kh = session.KhoaHoc;
-        if (kh.includes("B.01") || kh.includes("B11")) {
-          category = "B1";
-        } else if (kh.includes("B2")) {
-          category = "B2";
-        } else if (
-          kh.includes("B") &&
-          !kh.includes("B.01") &&
-          !kh.includes("B11") &&
-          !kh.includes("B1")
-        ) {
-          category = "B2";
-        } else if (kh.includes("C")) {
-          category = "C";
-        }
+        const mapped = mapCategory(session.LoaiKhoaHoc, session.KhoaHoc);
+        if (mapped !== "Unknown") category = mapped;
       });
       let studentStatus = false;
 
@@ -974,23 +990,7 @@ router.get("/computeData", async (req, res) => {
 
     // Handle students with HoTen in Student model but not in dat_ss
     for (const student of students) {
-      let category = "Unknown";
-
-      const kh = student.KhoaHoc;
-      if (kh.includes("B.01") || kh.includes("B11")) {
-        category = "B1";
-      } else if (kh.includes("B2")) {
-        category = "B2";
-      } else if (
-        kh.includes("B") &&
-        !kh.includes("B.01") &&
-        !kh.includes("B11") &&
-        !kh.includes("B1")
-      ) {
-        category = "B2";
-      } else if (kh.includes("C")) {
-        category = "C";
-      }
+      const category = mapCategory(student.LoaiKhoaHoc, student.KhoaHoc);
 
       if (!existingTotalHoTenSet.has(student.HoTen)) {
         const newTotal = new Total({
@@ -1665,5 +1665,30 @@ const isDurationGreaterThan4Hours = (duration) => {
   const [hours, minutes] = duration.split("h").map(Number);
   return hours * 60 + minutes >= 240; // 4 hours in minutes
 };
+
+// Phân hạng B1/B2/C dựa trên "Loại khóa học" (cột mới trong file DAT).
+// Mapping: B.01 -> B1, B -> B2, các biến thể C (C1, C1-Cm, C1-D2, Cm-CE) -> C.
+// Fallback: nếu thiếu LoaiKhoaHoc, dùng string-match trên KhoaHoc như cũ.
+function mapCategory(loaiKhoaHoc, khoaHoc) {
+  if (loaiKhoaHoc) {
+    const loai = loaiKhoaHoc.trim();
+    if (loai === "B.01" || loai === "B11") return "B1";
+    if (loai === "B") return "B2";
+    if (loai.toUpperCase().startsWith("C")) return "C";
+  }
+  // Fallback theo tên khóa học (logic cũ)
+  const kh = khoaHoc || "";
+  if (kh.includes("B.01") || kh.includes("B11")) return "B1";
+  if (kh.includes("B2")) return "B2";
+  if (
+    kh.includes("B") &&
+    !kh.includes("B.01") &&
+    !kh.includes("B11") &&
+    !kh.includes("B1")
+  )
+    return "B2";
+  if (kh.includes("C")) return "C";
+  return "Unknown";
+}
 
 module.exports = router;
