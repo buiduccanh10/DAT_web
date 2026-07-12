@@ -1031,8 +1031,14 @@ router.get("/computeData", async (req, res) => {
 
     const khoahocArray = req.query.khoahoc;
 
-    const kh = await dateDAT.find({}).lean();
-    const total = await Total.find({}).lean();
+    let queryObj = {};
+    if (query) {
+      queryObj.TenDanhSachDAT = query;
+    }
+
+    const distinctKhoaHoc = await Total.distinct("KhoaHoc", queryObj);
+    const kh = distinctKhoaHoc.map(k => ({ KhoaHoc: k }));
+
     const distinctTenDanhSach = await DAT.distinct("TenDanhSachDAT").lean();
 
     if (khoahocArray) {
@@ -1041,9 +1047,8 @@ router.get("/computeData", async (req, res) => {
         : khoahocArray
         ? [khoahocArray]
         : [];
-      const total = await Total.find({
-        KhoaHoc: { $in: selectedKhoaHoc },
-      }).lean();
+      queryObj.KhoaHoc = { $in: selectedKhoaHoc };
+      const total = await Total.find(queryObj).lean();
 
       res.render("total", {
         total,
@@ -1054,6 +1059,7 @@ router.get("/computeData", async (req, res) => {
         missingStudents: missingStudents.join(", "),
       });
     } else {
+      const total = await Total.find(queryObj).lean();
       res.render("total", {
         total,
         kh,
