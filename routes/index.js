@@ -128,10 +128,6 @@ router.post("/upload", upload.single("file"), (req, res) => {
       row["Thời gian bắt đầu phiên học"] = moment(
         row["Thời gian bắt đầu phiên học"]
       ).format("DD/MM/YY HH:mm");
-
-      row["Thời gian thực hành (giờ) (CSĐT truyền lên)"] = formatInputTime(
-        row["Thời gian thực hành (giờ) (CSĐT truyền lên)"]
-      );
     }
     // Các cột mới của file DAT
     if (row["Thời gian kết thúc phiên học"] instanceof Date) {
@@ -934,6 +930,12 @@ router.get("/computeData", async (req, res) => {
         studentStatus = true;
       }
 
+      const avgSpeed = data.totalDuration > 0 ? data.totalDistance / (data.totalDuration / 60) : 0;
+      if (data.totalDuration > 0 && avgSpeed < 25) {
+        reasons.push("Tốc độ trung bình dưới 25km/h");
+        studentStatus = true;
+      }
+
       let xeTapLaiList = Array.from(data.XeTapLai);
 
       for (let bienSoXe of xeTapLaiList) {
@@ -1621,12 +1623,19 @@ function parseDuration(duration) {
     return Math.round(duration * 60);
   }
 
-  // File cũ / đã format: chuỗi "XhYY" (vd "1h30")
+  // File cũ / đã format: chuỗi "XhYY" (vd "1h30") hoặc chuỗi thập phân "1.5"
   if (typeof duration === "string") {
-    const [hoursString, minutesString] = duration.split("h");
-    const hours = parseInt(hoursString, 10) || 0;
-    const minutes = parseInt(minutesString, 10) || 0;
-    return hours * 60 + minutes;
+    if (duration.includes("h")) {
+      const [hoursString, minutesString] = duration.split("h");
+      const hours = parseInt(hoursString, 10) || 0;
+      const minutes = parseInt(minutesString, 10) || 0;
+      return hours * 60 + minutes;
+    } else {
+      const parsedFloat = parseFloat(duration);
+      if (!isNaN(parsedFloat)) {
+        return Math.round(parsedFloat * 60);
+      }
+    }
   }
 
   return 0;
