@@ -244,10 +244,10 @@ router.get("/save-dat-session", async (req, res) => {
   for (let i = 0; i < data.length; i++) {
     const item = data[i];
 
-    // Chuyển đổi thời gian từ chuỗi sang phút
-    const thoiGianPhut =
-      parseInt(item.ThoiGian.split("h")[0]) * 60 +
-      parseInt(item.ThoiGian.split("h")[1]);
+    // Chuyển đổi thời gian sang phút
+    // File mới: ThoiGian là số thập phân (giờ, vd 0.04, 1.5)
+    // File cũ / đã format: ThoiGian là chuỗi "XhYY" (vd "1h30")
+    const thoiGianPhut = parseDuration(item.ThoiGian);
 
     // Đọc thời gian lái xe ban đêm trực tiếp từ file DAT (giờ thập phân -> phút)
     const thoiGianBanDemGio = parseFloat(item.ThoiGianBanDem) || 0;
@@ -1613,16 +1613,23 @@ function convertToISODate(dateStr) {
 //   return hours * 60 + minutes;
 // }
 
-function parseDuration(durationString) {
-  if (!durationString || typeof durationString !== "string") {
-    return 0; // Default to 0 minutes if durationString is undefined or not a string
+function parseDuration(duration) {
+  if (duration == null) return 0;
+
+  // File DAT mới: thời gian là số thập phân (giờ, vd 0.04, 1.5)
+  if (typeof duration === "number") {
+    return Math.round(duration * 60);
   }
 
-  const [hoursString, minutesString] = durationString.split("h");
-  const hours = parseInt(hoursString, 10) || 0;
-  const minutes = parseInt(minutesString, 10) || 0;
+  // File cũ / đã format: chuỗi "XhYY" (vd "1h30")
+  if (typeof duration === "string") {
+    const [hoursString, minutesString] = duration.split("h");
+    const hours = parseInt(hoursString, 10) || 0;
+    const minutes = parseInt(minutesString, 10) || 0;
+    return hours * 60 + minutes;
+  }
 
-  return hours * 60 + minutes;
+  return 0;
 }
 
 function formatTime(minutes) {
@@ -1667,8 +1674,7 @@ function formatGender(gender) {
 }
 
 const isDurationGreaterThan4Hours = (duration) => {
-  const [hours, minutes] = duration.split("h").map(Number);
-  return hours * 60 + minutes >= 240; // 4 hours in minutes
+  return parseDuration(duration) >= 240; // 4 hours in minutes
 };
 
 // Phân hạng B1/B2/C dựa trên "Loại khóa học" (cột mới trong file DAT).
