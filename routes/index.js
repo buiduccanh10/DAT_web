@@ -300,8 +300,15 @@ router.get("/save-dat-session", async (req, res) => {
     if (matchingDateDATs.length > 0) {
       const sessionDate = moment(item.NgayDaoTao, "DD/MM/YY HH:mm");
       isWithinMainSchedule = matchingDateDATs.some((dateDAT) => {
-        const startDate = moment(dateDAT.startDate, "DD/MM/YY");
-        const endDate = moment(dateDAT.endDate, "DD/MM/YY").endOf("day");
+        let sd = dateDAT.startDate;
+        let ed = dateDAT.endDate;
+        if (item.KhoaHoc && item.KhoaHoc.includes(".")) {
+          sd = dateDAT.startDateB11 || dateDAT.startDate;
+          ed = dateDAT.endDateB11 || dateDAT.endDate;
+        }
+        
+        const startDate = moment(sd, "DD/MM/YY");
+        const endDate = moment(ed, "DD/MM/YY").endOf("day");
         return (
           sessionDate.isSameOrAfter(startDate) &&
           sessionDate.isSameOrBefore(endDate)
