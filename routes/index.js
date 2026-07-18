@@ -285,7 +285,7 @@ router.get("/save-dat-session", async (req, res) => {
     item.TotalMorningDistance = quangDuongSang.toFixed(2);
     item.TotalEveningDistance = quangDuongToi.toFixed(2);
 
-    const ngayDaoTao = moment(item.NgayDaoTao, "DD/MM/YY HH:mm");
+    const ngayDaoTao = moment(item.NgayDaoTao, ["DD/MM/YYYY HH:mm:ss", "DD/MM/YY HH:mm"]);
 
     const matchingCar = cars.find((car) => car.BienSoXe === item.XeTapLai);
     // Tạo một mảng để lưu trữ các lý do
@@ -298,7 +298,7 @@ router.get("/save-dat-session", async (req, res) => {
 
     let isWithinMainSchedule = true;
     if (matchingDateDATs.length > 0) {
-      const sessionDate = moment(item.NgayDaoTao, "DD/MM/YY HH:mm");
+      const sessionDate = moment(item.NgayDaoTao, ["DD/MM/YYYY HH:mm:ss", "DD/MM/YY HH:mm"]);
       isWithinMainSchedule = matchingDateDATs.some((dateDAT) => {
         let sd = dateDAT.startDate;
         let ed = dateDAT.endDate;
