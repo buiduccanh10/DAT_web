@@ -87,9 +87,10 @@ const upload = multer({ storage: storage });
 // File DAT mới có nhiều sheet, sheet đầu có thể chỉ chứa dòng tiêu đề (meta).
 // Chọn sheet đầu tiên có cả cột "STT" và "Mã phiên học" sau khi chuẩn hoá key.
 function pickDataSheet(workbook) {
+  const options = { raw: false, dateNF: "DD/MM/YYYY HH:mm:ss" };
   for (const name of workbook.SheetNames) {
     const sheet = workbook.Sheets[name];
-    const rows = xlsx.utils.sheet_to_json(sheet);
+    const rows = xlsx.utils.sheet_to_json(sheet, options);
     if (rows.length === 0) continue;
     const keys = Object.keys(normalizeRow(rows[0]));
     if (keys.includes("STT") && keys.includes("Mã phiên học")) {
@@ -98,7 +99,8 @@ function pickDataSheet(workbook) {
   }
   // Fallback: sheet đầu tiên
   return xlsx.utils.sheet_to_json(
-    workbook.Sheets[workbook.SheetNames[0]]
+    workbook.Sheets[workbook.SheetNames[0]],
+    options
   );
 }
 
@@ -116,8 +118,8 @@ function normalizeRow(row) {
 router.post("/upload", upload.single("file"), (req, res) => {
   const filePath = req.file.path;
 
-  // Đọc file Excel với tùy chọn cellDates: true
-  const workbook = xlsx.readFile(filePath, { cellDates: true });
+  // Đọc file Excel không dùng cellDates để lấy raw string hiển thị như trên file
+  const workbook = xlsx.readFile(filePath);
   let data = pickDataSheet(workbook);
 
   // Chuẩn hoá toàn bộ key của mỗi dòng
@@ -135,22 +137,6 @@ router.post("/upload", upload.single("file"), (req, res) => {
       }
     }
 
-    if (row["Thời gian bắt đầu phiên học"] instanceof Date) {
-      row["Thời gian bắt đầu phiên học"] = moment(
-        row["Thời gian bắt đầu phiên học"]
-      ).format("DD/MM/YY HH:mm");
-    }
-    // Các cột mới của file DAT
-    if (row["Thời gian kết thúc phiên học"] instanceof Date) {
-      row["Thời gian kết thúc phiên học"] = moment(
-        row["Thời gian kết thúc phiên học"]
-      ).format("DD/MM/YY HH:mm");
-    }
-    if (row["Thời gian máy chủ nhận phiên học"] instanceof Date) {
-      row["Thời gian máy chủ nhận phiên học"] = moment(
-        row["Thời gian máy chủ nhận phiên học"]
-      ).format("DD/MM/YY HH:mm");
-    }
     return row;
   });
 
@@ -418,7 +404,7 @@ router.get("/save-dat-session", async (req, res) => {
 
   sessions.forEach((session) => {
     const studentId = session.MaHocVien;
-    const date = moment(session.NgayDaoTao, "DD/MM/YY HH:mm").format(
+    const date = moment(session.NgayDaoTao, ["DD/MM/YYYY HH:mm:ss", "DD/MM/YY HH:mm"]).format(
       "DD/MM/YY"
     ); // Chỉ lấy phần ngày
 
@@ -455,7 +441,7 @@ router.get("/save-dat-session", async (req, res) => {
 
         // Find the latest end time session in the day
         for (const session of data.sessions) {
-          const endTime = moment(session.NgayDaoTao, "DD/MM/YY HH:mm"); // Assuming endDateTime in a different format as date and time combined
+          const endTime = moment(session.NgayDaoTao, ["DD/MM/YYYY HH:mm:ss", "DD/MM/YY HH:mm"]); // Assuming endDateTime in a different format as date and time combined
           if (!latestEndTime || endTime.isAfter(latestEndTime)) {
             latestSession = session;
             latestEndTime = endTime;
@@ -484,8 +470,8 @@ router.get("/save-dat-session", async (req, res) => {
 
       // Sort sessions by start time to ensure chronological order
       sessions.sort((a, b) => {
-        const startA = moment(a.NgayDaoTao, "DD/MM/YY HH:mm");
-        const startB = moment(b.NgayDaoTao, "DD/MM/YY HH:mm");
+        const startA = moment(a.NgayDaoTao, ["DD/MM/YYYY HH:mm:ss", "DD/MM/YY HH:mm"]);
+        const startB = moment(b.NgayDaoTao, ["DD/MM/YYYY HH:mm:ss", "DD/MM/YY HH:mm"]);
         return startA - startB;
       });
 
@@ -502,7 +488,7 @@ router.get("/save-dat-session", async (req, res) => {
         const endCurrent = startCurrent
           .clone()
           .add(parseDuration(currentSession.ThoiGian), "minutes");
-        const startNext = moment(nextSession.NgayDaoTao, "DD/MM/YY HH:mm");
+        const startNext = moment(nextSession.NgayDaoTao, ["DD/MM/YYYY HH:mm:ss", "DD/MM/YY HH:mm"]);
 
         const breakTime = startNext.diff(endCurrent, "minutes");
 
@@ -536,8 +522,8 @@ router.get("/save-dat-session", async (req, res) => {
   // Group sessions by teacher and date
   sessions.forEach((session) => {
     const teacher = session.MaGiaoVien;
-    const date = moment(session.NgayDaoTao, "DD/MM/YY").format("DD/MM/YY");
-    const startDateTime = moment(session.NgayDaoTao, "DD/MM/YY HH:mm");
+    const date = moment(session.NgayDaoTao, ["DD/MM/YYYY HH:mm:ss", "DD/MM/YY HH:mm", "DD/MM/YY"]).format("DD/MM/YY");
+    const startDateTime = moment(session.NgayDaoTao, ["DD/MM/YYYY HH:mm:ss", "DD/MM/YY HH:mm"]);
     const endDateTime = startDateTime
       .clone()
       .add(parseDuration(session.ThoiGian), "minutes");
