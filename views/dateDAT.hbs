@@ -171,12 +171,12 @@ function showB11() {
   var form = document.getElementById("datDateB11");
 
   if (kh.includes(".")) {
-    // Là hạng B1 (có dấu .) -> ẩn trường ngày B11 (chỉ cần dùng ngày chung)
-    form.style.display = "none";
+    // Là hạng B1 (có dấu .) -> hiện input B11
+    form.style.display = "block";
   }
   else if (kh.includes("B") || kh.includes("C")) {
-    // Là hạng B2 hoặc C (không có dấu .) -> hiện trường ngày B11
-    form.style.display = "block";
+    // Là hạng B2 hoặc C (không có dấu .) -> ẩn B11 input
+    form.style.display = "none";
   }
   else {
     form.style.display = "none";
