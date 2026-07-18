@@ -87,10 +87,9 @@ const upload = multer({ storage: storage });
 // File DAT mới có nhiều sheet, sheet đầu có thể chỉ chứa dòng tiêu đề (meta).
 // Chọn sheet đầu tiên có cả cột "STT" và "Mã phiên học" sau khi chuẩn hoá key.
 function pickDataSheet(workbook) {
-  const options = { raw: false, dateNF: "DD/MM/YYYY HH:mm:ss" };
   for (const name of workbook.SheetNames) {
     const sheet = workbook.Sheets[name];
-    const rows = xlsx.utils.sheet_to_json(sheet, options);
+    const rows = xlsx.utils.sheet_to_json(sheet);
     if (rows.length === 0) continue;
     const keys = Object.keys(normalizeRow(rows[0]));
     if (keys.includes("STT") && keys.includes("Mã phiên học")) {
@@ -99,8 +98,7 @@ function pickDataSheet(workbook) {
   }
   // Fallback: sheet đầu tiên
   return xlsx.utils.sheet_to_json(
-    workbook.Sheets[workbook.SheetNames[0]],
-    options
+    workbook.Sheets[workbook.SheetNames[0]]
   );
 }
 
@@ -118,8 +116,8 @@ function normalizeRow(row) {
 router.post("/upload", upload.single("file"), (req, res) => {
   const filePath = req.file.path;
 
-  // Đọc file Excel không dùng cellDates để lấy raw string hiển thị như trên file
-  const workbook = xlsx.readFile(filePath);
+  // Đọc file Excel với tùy chọn cellDates: true
+  const workbook = xlsx.readFile(filePath, { cellDates: true });
   let data = pickDataSheet(workbook);
 
   // Chuẩn hoá toàn bộ key của mỗi dòng
@@ -135,6 +133,25 @@ router.post("/upload", upload.single("file"), (req, res) => {
       } else {
         row["Loại khóa học"] = "B2";
       }
+    }
+
+    // Nếu Excel tự nhận diện là Date, tức là nó đã bị đọc ngược ngày/tháng (theo chuẩn US).
+    // Bằng cách format Date này thành MM/DD/YYYY, ta sẽ lấy lại ĐÚNG y chang chuỗi DD/MM/YYYY ban đầu!
+    if (row["Thời gian bắt đầu phiên học"] instanceof Date) {
+      row["Thời gian bắt đầu phiên học"] = moment(
+        row["Thời gian bắt đầu phiên học"]
+      ).format("MM/DD/YYYY HH:mm:ss");
+    }
+    // Các cột mới của file DAT
+    if (row["Thời gian kết thúc phiên học"] instanceof Date) {
+      row["Thời gian kết thúc phiên học"] = moment(
+        row["Thời gian kết thúc phiên học"]
+      ).format("MM/DD/YYYY HH:mm:ss");
+    }
+    if (row["Thời gian máy chủ nhận phiên học"] instanceof Date) {
+      row["Thời gian máy chủ nhận phiên học"] = moment(
+        row["Thời gian máy chủ nhận phiên học"]
+      ).format("MM/DD/YYYY HH:mm:ss");
     }
 
     return row;
