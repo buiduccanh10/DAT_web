@@ -4,6 +4,7 @@ const studentSchema = new mongoose.Schema({
   STT: String,
   MaHocVien: String,
   KhoaHoc:String,
+  LoaiKhoaHoc:String,
   MaKhoaHoc:String,
   HoTen: String,
   NgaySinh: String,

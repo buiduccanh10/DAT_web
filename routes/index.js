@@ -124,6 +124,17 @@ router.post("/upload", upload.single("file"), (req, res) => {
   data = data.map(normalizeRow);
 
   data = data.map((row) => {
+    let khoaHoc = row["Tên khóa học"] || "";
+    if (khoaHoc) {
+      if (khoaHoc.includes("C")) {
+        row["Loại khóa học"] = "C";
+      } else if (khoaHoc.includes(".")) {
+        row["Loại khóa học"] = "B1";
+      } else {
+        row["Loại khóa học"] = "B2";
+      }
+    }
+
     if (row["Thời gian bắt đầu phiên học"] instanceof Date) {
       row["Thời gian bắt đầu phiên học"] = moment(
         row["Thời gian bắt đầu phiên học"]
@@ -709,8 +720,19 @@ router.post("/uploadxml", upload.array("files", 15), (req, res) => {
             return reject("Error parsing XML");
           }
 
-          const khoaHoc = result.BAO_CAO1.DATA[0].KHOA_HOC[0].TEN_KHOA_HOC[0];
+          let khoaHoc = result.BAO_CAO1.DATA[0].KHOA_HOC[0].TEN_KHOA_HOC[0];
           const maKhoaHoc = result.BAO_CAO1.DATA[0].KHOA_HOC[0].MA_KHOA_HOC[0];
+          
+          let loaiKhoaHoc = "";
+          if (khoaHoc) {
+            if (khoaHoc.includes("C")) {
+              loaiKhoaHoc = "C";
+            } else if (khoaHoc.includes(".")) {
+              loaiKhoaHoc = "B1";
+            } else {
+              loaiKhoaHoc = "B2";
+            }
+          }
 
           // Assuming the XML structure, convert it to a usable format
           const dataFromXml = result.BAO_CAO1.DATA[0].NGUOI_LXS[0].NGUOI_LX.map(
@@ -718,6 +740,7 @@ router.post("/uploadxml", upload.array("files", 15), (req, res) => {
               STT: lx.SO_TT[0],
               MaHocVien: lx.MA_DK[0],
               KhoaHoc: khoaHoc,
+              LoaiKhoaHoc: loaiKhoaHoc,
               MaKhoaHoc: maKhoaHoc,
               HoTen: lx.HO_VA_TEN[0],
               NgaySinh: formatDate(lx.NGAY_SINH[0]),
@@ -1694,27 +1717,19 @@ const isDurationGreaterThan4Hours = (duration) => {
 
 // Phân hạng B1/B2/C dựa trên "Loại khóa học" (cột mới trong file DAT).
 // Mapping: B.01 -> B1, B -> B2, các biến thể C (C1, C1-Cm, C1-D2, Cm-CE) -> C.
-// Fallback: nếu thiếu LoaiKhoaHoc, dùng string-match trên KhoaHoc như cũ.
+// Fallback: nếu thiếu LoaiKhoaHoc, dùng string-match trên KhoaHoc (có dấu . là B1, không có là B2, có C là C).
 function mapCategory(loaiKhoaHoc, khoaHoc) {
   if (loaiKhoaHoc) {
     const loai = loaiKhoaHoc.trim();
-    if (loai === "B.01" || loai === "B11") return "B1";
-    if (loai === "B") return "B2";
+    if (loai === "B1" || loai === "B.01" || loai === "B11") return "B1";
+    if (loai === "B2" || loai === "B") return "B2";
     if (loai.toUpperCase().startsWith("C")) return "C";
   }
-  // Fallback theo tên khóa học (logic cũ)
+  // Fallback theo tên khóa học (logic mới)
   const kh = khoaHoc || "";
-  if (kh.includes("B.01") || kh.includes("B11")) return "B1";
-  if (kh.includes("B2")) return "B2";
-  if (
-    kh.includes("B") &&
-    !kh.includes("B.01") &&
-    !kh.includes("B11") &&
-    !kh.includes("B1")
-  )
-    return "B2";
   if (kh.includes("C")) return "C";
-  return "Unknown";
+  if (kh.includes(".")) return "B1";
+  return "B2";
 }
 
 module.exports = router;
