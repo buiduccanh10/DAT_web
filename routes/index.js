@@ -44,6 +44,16 @@ router.get("/car", function (req, res, next) {
   res.render("car", { title: "Car input" });
 });
 
+router.get("/allCar", async function (req, res, next) {
+  try {
+    const cars = await Car.find({}).lean();
+    res.render("allCar", { cars });
+  } catch (err) {
+    console.error("Error fetching cars:", err);
+    res.status(500).send("Error fetching cars list.");
+  }
+});
+
 router.get("/allStudent", async function (req, res, next) {
   const student = await Student.find({}).lean();
 
@@ -188,6 +198,46 @@ router.post("/save-car", async (req, res) => {
     res.status(200).send("Data saved successfully!");
   } catch (error) {
     res.status(500).send("Error saving data: " + error.message);
+  }
+});
+
+router.post("/submitCar", async (req, res) => {
+  try {
+    const { id, BienSoXe, LoaiHangXe } = req.body;
+    const cleanBienSo = BienSoXe ? String(BienSoXe).replace(/[-,.]/g, "").trim() : "";
+    const cleanHang = LoaiHangXe ? String(LoaiHangXe).trim() : "";
+
+    if (!cleanBienSo || !cleanHang) {
+      return res.status(400).send("Biển số xe và Loại hạng xe không được để trống!");
+    }
+
+    if (id && id !== "") {
+      await Car.findByIdAndUpdate(id, { BienSoXe: cleanBienSo, LoaiHangXe: cleanHang });
+    } else {
+      const existing = await Car.findOne({ BienSoXe: cleanBienSo });
+      if (existing) {
+        await Car.findByIdAndUpdate(existing._id, { LoaiHangXe: cleanHang });
+      } else {
+        await Car.create({ BienSoXe: cleanBienSo, LoaiHangXe: cleanHang });
+      }
+    }
+    res.redirect("/allCar");
+  } catch (error) {
+    console.error("Error submitting car:", error);
+    res.status(500).send("Error submitting car: " + error.message);
+  }
+});
+
+router.post("/deleteCar", async (req, res) => {
+  try {
+    const { id } = req.body;
+    if (id) {
+      await Car.findByIdAndDelete(id);
+    }
+    res.redirect("/allCar");
+  } catch (error) {
+    console.error("Error deleting car:", error);
+    res.status(500).send("Error deleting car: " + error.message);
   }
 });
 

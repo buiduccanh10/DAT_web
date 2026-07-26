@@ -1,0 +1,144 @@
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Danh sách xe</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/simple-datatables@7.1.2/dist/style.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      h2 { text-align: center; margin-bottom: 20px; }
+      .form-group { margin-bottom: 15px; }
+      label { display: block; margin-bottom: 5px; font-weight: 500; }
+      input[type="text"], select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px; }
+      .savedate { margin-top: 20px; display: block; padding: 10px; background-color: #007bff; color: white; border: none; border-radius: 5px; width: 100%; font-weight: 600; }
+      .savedate:hover { background-color: #0056b3; }
+      .reset-btn { margin-top: 10px; display: block; padding: 8px; background-color: #6c757d; color: white; border: none; border-radius: 5px; width: 100%; text-align: center; font-size: 0.9em; }
+      .reset-btn:hover { background-color: #5a6268; color: white; }
+      .actions { display: flex; gap: 5px; }
+      .formdate { flex: 1; min-width: 300px; }
+      .card { flex: 2; min-width: 400px; margin-bottom: 20px; }
+      .card-header { font-weight: bold; background-color: #f8f9fa; }
+      .card-body { overflow-x: auto; }
+      .container-custom { margin: 20px auto; padding: 20px; display: flex; flex-wrap: wrap; gap: 30px; }
+    </style>
+  </head>
+  <body>
+    <div class="container container-custom mt-4">
+      <form class="formdate" action="/submitCar" method="post" id="carForm">
+        <h2 id="formTitle">Thêm / Sửa xe</h2>
+        <input type="text" id="id" name="id" hidden />
+        <div class="form-group">
+          <label for="BienSoXe">Biển số xe:</label>
+          <input type="text" id="BienSoXe" name="BienSoXe" required placeholder="Ví dụ: 34A85127" />
+        </div>
+        <div class="form-group">
+          <label for="LoaiHangXe">Loại hạng xe:</label>
+          <input type="text" id="LoaiHangXe" name="LoaiHangXe" required placeholder="Ví dụ: B11, B2, C..." />
+        </div>
+        <button class="savedate" type="submit" id="submitBtn">Lưu xe</button>
+        <button type="button" class="reset-btn" id="resetBtn" style="display: none;">Hủy chế độ sửa</button>
+      </form>
+
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span><i class="fas fa-table me-1"></i> Danh sách xe hệ thống (Tổng: {{cars.length}} xe)</span>
+          <a href="/car" class="btn btn-sm btn-outline-primary">+ Tải lên từ Excel</a>
+        </div>
+        <div class="card-body">
+          <table id="datatablesSimple1" class="table table-striped table-bordered">
+            <thead>
+              <tr>
+                <th>Biển số xe</th>
+                <th>Loại hạng xe</th>
+                <th>Hành động</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{#each cars}}
+                <tr>
+                  <td><strong>{{this.BienSoXe}}</strong></td>
+                  <td>
+                    {{#if (eq this.LoaiHangXe "B11")}}
+                      <span class="badge bg-success" style="font-size: 0.9rem;">{{this.LoaiHangXe}}</span>
+                    {{else}}
+                      <span class="badge bg-primary" style="font-size: 0.9rem;">{{this.LoaiHangXe}}</span>
+                    {{/if}}
+                  </td>
+                  <td class="actions">
+                    <button 
+                      type="button" 
+                      class="btn btn-warning btn-sm edit-btn" 
+                      data-id="{{this._id}}" 
+                      data-bienso="{{this.BienSoXe}}" 
+                      data-hang="{{this.LoaiHangXe}}">
+                      Sửa
+                    </button>
+                    <form action="/deleteCar" method="post" style="display:inline;" onsubmit="return confirm('Bạn có chắc chắn muốn xoá xe {{this.BienSoXe}} khỏi danh sách?');">
+                      <input type="hidden" name="id" value="{{this._id}}" />
+                      <button type="submit" class="btn btn-danger btn-sm">Xoá</button>
+                    </form>
+                  </td>
+                </tr>
+              {{/each}}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/simple-datatables@7.1.2/dist/umd/simple-datatables.min.js" crossorigin="anonymous"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        var tableElement = document.getElementById("datatablesSimple1");
+        if (tableElement && typeof simpleDatatables !== "undefined") {
+          new simpleDatatables.DataTable(tableElement);
+        }
+
+        const idInput = document.getElementById("id");
+        const bienSoInput = document.getElementById("BienSoXe");
+        const hangXeInput = document.getElementById("LoaiHangXe");
+        const formTitle = document.getElementById("formTitle");
+        const submitBtn = document.getElementById("submitBtn");
+        const resetBtn = document.getElementById("resetBtn");
+
+        document.addEventListener("click", function (e) {
+          if (e.target && e.target.classList.contains("edit-btn")) {
+            const id = e.target.getAttribute("data-id");
+            const bienso = e.target.getAttribute("data-bienso") || "";
+            const hang = e.target.getAttribute("data-hang") || "";
+
+            idInput.value = id;
+            bienSoInput.value = bienso;
+            hangXeInput.value = hang;
+            
+            formTitle.textContent = "Cập nhật thông tin xe";
+            submitBtn.textContent = "Cập nhật";
+            submitBtn.classList.remove("savedate");
+            submitBtn.style.backgroundColor = "#ffc107";
+            submitBtn.style.color = "#000";
+            resetBtn.style.display = "block";
+            bienSoInput.focus();
+          }
+        });
+
+        resetBtn.addEventListener("click", function () {
+          idInput.value = "";
+          bienSoInput.value = "";
+          hangXeInput.value = "";
+          formTitle.textContent = "Thêm / Sửa xe";
+          submitBtn.textContent = "Lưu xe";
+          submitBtn.style.backgroundColor = "#007bff";
+          submitBtn.style.color = "#fff";
+          resetBtn.style.display = "none";
+        });
+      });
+    </script>
+  </body>
+</html>
