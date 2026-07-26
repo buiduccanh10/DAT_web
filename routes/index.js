@@ -273,14 +273,29 @@ router.get("/save-dat-session", async (req, res) => {
       quangDuongSang = tongQuangDuong - quangDuongToi;
     }
 
-    // Đọc thời gian lái xe số tự động trực tiếp từ file DAT (giờ thập phân -> phút)
-    const thoiGianXeTuDongGio = parseFloat(item.ThoiGianXeTuDong) || 0;
-    const thoiGianXeTuDong = Math.round(thoiGianXeTuDongGio * 60);
-    // Quãng đường xe tự động chia theo tỉ lệ thời gian tự động / tổng thời gian
-    const quangDuongXeTuDong =
-      thoiGianPhut > 0
-        ? (tongQuangDuong * thoiGianXeTuDong) / thoiGianPhut
-        : 0;
+    const matchingCar = cars.find(
+      (car) =>
+        car.BienSoXe &&
+        item.XeTapLai &&
+        String(car.BienSoXe).trim() === String(item.XeTapLai).trim()
+    );
+
+    // Tính thời gian & quãng đường xe số tự động (B11):
+    // - Ưu tiên theo danh sách xe B11: Nếu xe thuộc danh sách B11 đã nhập thì tính toàn bộ thời gian & quãng đường của phiên là B11.
+    // - Nếu xe không thuộc danh sách B11, fallback đọc từ cột Thời gian lái xe số tự động từ file DAT (nếu có).
+    let thoiGianXeTuDong = 0;
+    let quangDuongXeTuDong = 0;
+    if (matchingCar && matchingCar.LoaiHangXe === "B11") {
+      thoiGianXeTuDong = thoiGianPhut;
+      quangDuongXeTuDong = tongQuangDuong;
+    } else {
+      const thoiGianXeTuDongGio = parseFloat(item.ThoiGianXeTuDong) || 0;
+      thoiGianXeTuDong = Math.round(thoiGianXeTuDongGio * 60);
+      quangDuongXeTuDong =
+        thoiGianPhut > 0
+          ? (tongQuangDuong * thoiGianXeTuDong) / thoiGianPhut
+          : 0;
+    }
 
     // Thêm thông tin tính toán vào mục dữ liệu
     item.TotalMorningTime = thoiGianSang;
@@ -289,8 +304,6 @@ router.get("/save-dat-session", async (req, res) => {
     item.TotalEveningDistance = quangDuongToi.toFixed(2);
 
     const ngayDaoTao = moment(item.NgayDaoTao, ["DD/MM/YYYY HH:mm:ss", "DD/MM/YY HH:mm"]);
-
-    const matchingCar = cars.find((car) => car.BienSoXe === item.XeTapLai);
     // Tạo một mảng để lưu trữ các lý do
     const lyDoLoaiList = [];
 
