@@ -958,6 +958,7 @@ router.get("/computeData", async (req, res) => {
     for (const [studentId, data] of studentMap.entries()) {
       const allSessions = await Dat_session.find({
         MaHocVien: studentId,
+        TenDanhSachDAT: query,
       }).lean();
       let totalDuration = 0;
       let totalDistance = 0;
@@ -1087,17 +1088,17 @@ router.get("/computeData", async (req, res) => {
 
     await Total.create(updatedStudents);
 
-    const existingTotalStudents = await Total.find().lean();
-    const existingTotalHoTenSet = new Set(
-      existingTotalStudents.map((student) => student.HoTen)
+    const existingTotalStudents = await Total.find({ TenDanhSachDAT: query }).lean();
+    const existingTotalIdSet = new Set(
+      existingTotalStudents.map((student) => student.MaHocVien)
     );
     const students = await Student.find().lean();
 
-    // Handle students with HoTen in Student model but not in dat_ss
+    // Handle students in Student model but not in dat_ss for this query
     for (const student of students) {
       const category = mapCategory(student.LoaiKhoaHoc, student.KhoaHoc);
 
-      if (!existingTotalHoTenSet.has(student.HoTen)) {
+      if (!existingTotalIdSet.has(student.MaHocVien)) {
         const newTotal = new Total({
           MaHocVien: student.MaHocVien,
           // Anh: student.Anh,
