@@ -180,10 +180,28 @@ router.post("/uploadCar", upload.single("file"), (req, res) => {
   let data = xlsx.utils.sheet_to_json(sheet);
 
   data = data.map((row) => {
-    if (row["Biển số"]) {
-      row["Biển số"] = row["Biển số"].replace(/[-,.]/g, "");
+    const normalized = {};
+    for (const key of Object.keys(row)) {
+      const cleanKey = key.replace(/\n/g, " ").replace(/\s+/g, " ").trim();
+      normalized[cleanKey] = row[key];
     }
-    return row;
+
+    const bienSoKey = Object.keys(normalized).find(k =>
+      /biển\s*số|bsx|biển\s*kiểm\s*soát/i.test(k)
+    );
+    const hangXeKey = Object.keys(normalized).find(k =>
+      /loại\s*hạng|hạng\s*xe|hạng|loại\s*xe/i.test(k)
+    );
+
+    if (bienSoKey) {
+      const val = String(normalized[bienSoKey] || "").replace(/[-,.]/g, "").trim();
+      normalized["Biển số"] = val;
+    }
+    if (hangXeKey) {
+      normalized["Loại hạng xe"] = normalized[hangXeKey];
+    }
+
+    return normalized;
   });
 
   // Hiển thị dữ liệu

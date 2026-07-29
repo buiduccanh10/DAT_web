@@ -64,10 +64,14 @@
                 <tr>
                   <td><strong>{{this.BienSoXe}}</strong></td>
                   <td>
-                    {{#if (eq this.LoaiHangXe "B11")}}
-                      <span class="badge bg-success" style="font-size: 0.9rem;">{{this.LoaiHangXe}}</span>
+                    {{#if this.LoaiHangXe}}
+                      {{#if (eq this.LoaiHangXe "B11")}}
+                        <span class="badge bg-success" style="font-size: 0.9rem;">{{this.LoaiHangXe}}</span>
+                      {{else}}
+                        <span class="badge bg-primary" style="font-size: 0.9rem;">{{this.LoaiHangXe}}</span>
+                      {{/if}}
                     {{else}}
-                      <span class="badge bg-primary" style="font-size: 0.9rem;">{{this.LoaiHangXe}}</span>
+                      <span class="text-muted fst-italic">Chưa có</span>
                     {{/if}}
                   </td>
                   <td class="actions">
