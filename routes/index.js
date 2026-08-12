@@ -430,7 +430,7 @@ router.get("/save-dat-session", async (req, res) => {
     const tocDo = thoiGianGio > 0 ? parseFloat(item.QuangDuong) / thoiGianGio : 0;
     const category = mapCategory(item.LoaiKhoaHoc, item.KhoaHoc);
     const isClassC = category === "C";
-    const tocDoQuaNhanh = isClassC ? Math.floor(tocDo) > 50 : Math.floor(tocDo) > 60;
+    const tocDoQuaNhanh = isClassC ? tocDo > 50 : tocDo > 60;
     const tocDoQuaNhe = tocDo > 0 && tocDo < 25;
 
     // Kiểm tra các điều kiện và thêm lý do vào mảng
@@ -443,9 +443,9 @@ router.get("/save-dat-session", async (req, res) => {
     if (thoiGianPhut <= 5) {
       lyDoLoaiList.push("Chưa đạt thời gian tối thiểu");
     }
-    if (isClassC && Math.floor(tocDo) > 50) {
+    if (isClassC && tocDo > 50) {
       lyDoLoaiList.push("Tốc độ vượt quá 50km/h");
-    } else if (!isClassC && Math.floor(tocDo) > 60) {
+    } else if (!isClassC && tocDo > 60) {
       lyDoLoaiList.push("Tốc độ vượt quá 60km/h");
     }
     if (tocDoQuaNhe) {
