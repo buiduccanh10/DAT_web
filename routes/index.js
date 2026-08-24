@@ -972,25 +972,29 @@ router.post("/save-data", async (req, res) => {
 
   try {
     for (const item of data) {
-      const existingStudent = await Student.find({
-        MaHocVien: item["MaHocVien"],
-      });
-
-      if (existingStudent) {
-        await Student.findByIdAndDelete(existingStudent._id);
-      }
-
-      const newItem = new Student({
-        ...item,
-      });
-
-      await newItem.save();
+      // Dùng findOneAndUpdate với upsert: true để cập nhật nếu đã tồn tại, hoặc tạo mới nếu chưa.
+      // Việc này giúp mã học viên luôn unique và không bị đổi _id khi lưu đè.
+      await Student.findOneAndUpdate(
+        { MaHocVien: item.MaHocVien },
+        { $set: item },
+        { upsert: true, new: true }
+      );
     }
 
     res.redirect("/xml");
   } catch (err) {
     console.error("Error saving data:", err);
     res.status(500).send("Error saving data");
+  }
+});
+
+router.post("/deleteAllStudents", async (req, res) => {
+  try {
+    await Student.deleteMany({});
+    res.redirect("/allStudent");
+  } catch (err) {
+    console.error("Error deleting all students:", err);
+    res.status(500).send("Error deleting all students");
   }
 });
 
