@@ -38,6 +38,7 @@
         <table id="datatablesSimple">
           <thead>
             <tr>
+              <th>Ảnh</th>
               <th>STT</th>
               <th>Mã Phiên</th>
               <th>Tỉ lệ</th>
@@ -56,6 +57,11 @@
           <tbody>
             {{#each dat_ss}}
               <tr>
+                <td style="text-align: center;">
+                  {{#if this.Anh}}
+                    <img src="data:image/jpeg;base64,{{this.Anh}}" alt="Ảnh" style="width: 50px; height: 66px; object-fit: cover; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">
+                  {{/if}}
+                </td>
                 <td>{{this.STT}}</td>
                 <td>{{this.MaPhien}}</td>
                 <td>{{this.TiLe}}</td>
@@ -105,3 +111,60 @@
 
   </body>
 </html>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    function applyStickyColumns() {
+        const table = document.getElementById('datatablesSimple');
+        if (!table) return;
+        const ths = table.querySelectorAll('thead th');
+        if (ths.length < 9) return;
+        
+        const numCols = 9;
+        let css = '';
+        let currentLeft = 0;
+        
+        for (let i = 0; i < numCols; i++) {
+            const width = ths[i].getBoundingClientRect().width;
+            css += `
+                #datatablesSimple th:nth-child(${i+1}),
+                #datatablesSimple td:nth-child(${i+1}) {
+                    position: sticky !important;
+                    left: ${currentLeft}px !important;
+                    background-color: #fff !important;
+                    z-index: 1;
+                    /* Tạo lại viền bên trong ô để viền không bị trôi đi khi cuộn */
+                    box-shadow: inset -1px 0 0 #dee2e6, inset 0 -1px 0 #dee2e6 !important;
+                }
+                #datatablesSimple thead th:nth-child(${i+1}) {
+                    z-index: 2 !important;
+                    box-shadow: inset -1px 0 0 #dee2e6, inset 0 -1px 0 #dee2e6, inset 0 1px 0 #dee2e6 !important;
+                }
+            `;
+            currentLeft += width;
+        }
+        
+        let styleTag = document.getElementById('sticky-style-alldat');
+        if (!styleTag) {
+            styleTag = document.createElement('style');
+            styleTag.id = 'sticky-style-alldat';
+            document.head.appendChild(styleTag);
+        }
+        styleTag.innerHTML = css;
+    }
+    
+    // Cập nhật ban đầu
+    setTimeout(applyStickyColumns, 100);
+    
+    const tableEl = document.getElementById('datatablesSimple');
+    if (tableEl) {
+        // Theo dõi kích thước bảng để tính lại toạ độ nếu cột co giãn
+        const observer = new ResizeObserver(() => applyStickyColumns());
+        observer.observe(tableEl);
+        
+        tableEl.addEventListener('datatable.sort', () => setTimeout(applyStickyColumns, 50));
+        tableEl.addEventListener('datatable.page', () => setTimeout(applyStickyColumns, 50));
+        tableEl.addEventListener('datatable.perpage', () => setTimeout(applyStickyColumns, 50));
+    }
+});
+</script>

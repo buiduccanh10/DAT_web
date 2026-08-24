@@ -65,7 +65,7 @@
                             {{#each results}}
                             <tr>
                                 <td>{{ this.MaHocVien }}</td>
-                                <td><img src="data:image/jpeg;base64,{{ this.Anh }}" alt="Ảnh" style="height: 130px; width: 100px;"></td>
+                                <td><img src="data:image/jpeg;base64,{{ this.Anh }}" alt="Ảnh" style="width: 90px; height: 120px; object-fit: cover; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.2);"></td>
                                 <td>{{ this.HoTen }}</td>
                                 <td>{{ this.KhoaHoc }}</td>
                                 <td>{{ this.NgaySinh }}</td>
@@ -162,7 +162,7 @@
                                             {{ this.MaHocVien}}
                                             <a href="/studentDetails/{{this.MaHocVien}}">Chi tiết</a>
                                         </td>
-                                        <td><img src="data:image/jpeg;base64,{{ this.Anh }}" alt="Ảnh" style="height: 130px; width: 100px;"></td>
+                                        <td><img src="data:image/jpeg;base64,{{ this.Anh }}" alt="Ảnh" style="width: 90px; height: 120px; object-fit: cover; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.2);"></td>
                                         <td>{{ this.HoTen }}</td>
                                         <td>{{ this.KhoaHoc }}</td>
                                         <td>{{ this.NgaySinh }}</td>
@@ -290,5 +290,59 @@ document.getElementById('duyet').addEventListener('click', function () {
 </script>
     <!-- Bootstrap JS và các script khác -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        function applyStickyColumns() {
+            const tables = document.querySelectorAll('.table-responsive table');
+            tables.forEach((table, index) => {
+                const ths = table.querySelectorAll('thead th');
+                if (ths.length < 8) return;
+                
+                const numCols = 8;
+                let css = '';
+                let currentLeft = 0;
+                
+                const tableClass = 'sticky-table-' + index;
+                table.classList.add(tableClass);
+                
+                for (let i = 0; i < numCols; i++) {
+                    const width = ths[i].getBoundingClientRect().width;
+                    css += `
+                        .${tableClass} th:nth-child(${i+1}),
+                        .${tableClass} td:nth-child(${i+1}) {
+                            position: sticky !important;
+                            left: ${currentLeft}px !important;
+                            background-color: #fff !important;
+                            z-index: 1;
+                            /* Tạo lại viền bên trong ô để viền không bị trôi đi khi cuộn */
+                            box-shadow: inset -1px 0 0 #dee2e6, inset 0 -1px 0 #dee2e6 !important;
+                        }
+                        .${tableClass} thead th:nth-child(${i+1}) {
+                            z-index: 2 !important;
+                            box-shadow: inset -1px 0 0 #dee2e6, inset 0 -1px 0 #dee2e6, inset 0 1px 0 #dee2e6 !important;
+                        }
+                    `;
+                    currentLeft += width;
+                }
+                
+                let styleTag = document.getElementById('sticky-style-' + index);
+                if (!styleTag) {
+                    styleTag = document.createElement('style');
+                    styleTag.id = 'sticky-style-' + index;
+                    document.head.appendChild(styleTag);
+                }
+                styleTag.innerHTML = css;
+            });
+        }
+        
+        // Cập nhật ban đầu
+        setTimeout(applyStickyColumns, 100);
+        
+        // Theo dõi kích thước bảng để tính lại toạ độ nếu cột co giãn
+        const tables = document.querySelectorAll('.table-responsive table');
+        const observer = new ResizeObserver(() => applyStickyColumns());
+        tables.forEach(table => observer.observe(table));
+    });
+    </script>
 </body>
 </html>

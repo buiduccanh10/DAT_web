@@ -76,6 +76,7 @@
             <table class="table table-bordered table-striped" id="data-table">
                 <thead>
                     <tr>
+                        <th style="min-width: 100px; text-align: center;">Ảnh</th>
                         <th>STT</th>
                         <th>Mã Học Viên</th>
                         <th>Khoá học</th>
@@ -90,13 +91,13 @@
                         <th>Số GPLX</th>
                         <th>Hạng GPLX</th>
                         <th>Nơi Cấp GPLX</th>
-                        <th>Ảnh</th>
                     </tr>
                 </thead>
                 <tbody>
                     {{#each data}}
                     <tr>
-                        <td>{{STT}}</td>
+                        <td style="text-align: center;"><img src="data:image/jpeg;base64,{{Anh}}" style="width: 90px; height: 120px; object-fit: cover; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.2);" alt="Ảnh"></td>
+                        <td style="vertical-align: middle;">{{STT}}</td>
                         <td>{{MaHocVien}}</td>
                         <td>{{KhoaHoc}}</td>
                         <td>{{MaKhoaHoc}}</td>
@@ -110,7 +111,6 @@
                         <td>{{SoGPLX}}</td>
                         <td>{{HangGPLX}}</td>
                         <td>{{NoiCapGPLX}}</td>
-                        <td><img src="data:image/jpeg;base64,{{Anh}}" class="img-thumbnail" alt="Ảnh"></td>
                     </tr>
                     {{/each}}
                 </tbody>
@@ -142,21 +142,21 @@
 
             rows.forEach(row => {
                 const rowData = {
-                    STT: row.cells[0].textContent,
-                    MaHocVien: row.cells[1].textContent,
-                    KhoaHoc: row.cells[2].textContent,
-                    MaKhoaHoc: row.cells[3].textContent,
-                    HoTen: row.cells[4].textContent,
-                    NgaySinh: row.cells[5].textContent,
-                    GioiTinh: row.cells[6].textContent,
-                    SoCMT: row.cells[7].textContent,
-                    NgayCapCMT: row.cells[8].textContent,
-                    NoiCapCMT: row.cells[9].textContent,
-                    NgayNhanHoSo: row.cells[10].textContent,
-                    SoGPLX: row.cells[11].textContent,
-                    HangGPLX: row.cells[12].textContent,
-                    NoiCapGPLX: row.cells[13].textContent,
-                    Anh: row.cells[14].querySelector('img').src.split(',')[1] // Get base64 string without data:image/jpeg;base64,
+                    Anh: row.cells[0].querySelector('img') ? row.cells[0].querySelector('img').src.split(',')[1] : "", // Get base64 string without data:image/jpeg;base64,
+                    STT: row.cells[1].textContent,
+                    MaHocVien: row.cells[2].textContent,
+                    KhoaHoc: row.cells[3].textContent,
+                    MaKhoaHoc: row.cells[4].textContent,
+                    HoTen: row.cells[5].textContent,
+                    NgaySinh: row.cells[6].textContent,
+                    GioiTinh: row.cells[7].textContent,
+                    SoCMT: row.cells[8].textContent,
+                    NgayCapCMT: row.cells[9].textContent,
+                    NoiCapCMT: row.cells[10].textContent,
+                    NgayNhanHoSo: row.cells[11].textContent,
+                    SoGPLX: row.cells[12].textContent,
+                    HangGPLX: row.cells[13].textContent,
+                    NoiCapGPLX: row.cells[14].textContent
                 };
                 data.push(rowData);
             });

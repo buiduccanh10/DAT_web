@@ -1,6 +1,9 @@
 # Use Node.js image as the base image
 FROM node:18
 
+# Cài đặt ffmpeg để hỗ trợ giải mã ảnh JP2 sang JPG
+RUN apt-get update && apt-get install -y ffmpeg
+
 # Set the working directory in the container
 WORKDIR /app
 

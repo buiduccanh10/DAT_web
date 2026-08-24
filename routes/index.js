@@ -775,6 +775,17 @@ router.get("/save-dat-session", async (req, res) => {
     const dat_ss = await Dat_session.find({ TenDanhSachDAT: query }).lean();
     const distinctTenDanhSach = await DAT.distinct("TenDanhSachDAT").lean();
 
+    // Gắn thêm ảnh vào `dat_ss` chỉ để hiển thị UI
+    const studentIds = dat_ss.map(s => s.MaHocVien);
+    const students = await Student.find({ MaHocVien: { $in: studentIds } }, 'MaHocVien Anh').lean();
+    const studentImageMap = {};
+    students.forEach(s => {
+      if (s.Anh) studentImageMap[s.MaHocVien] = s.Anh;
+    });
+    dat_ss.forEach(s => {
+      s.Anh = studentImageMap[s.MaHocVien] || "";
+    });
+
     // Render the view with fetched data
     res.render("allDat_session", { dat_ss, query, distinctTenDanhSach });
   } catch (err) {
@@ -787,6 +798,42 @@ function isOverlapping(start1, end1, start2, end2) {
   return start1 < end2 && start2 < end1;
 }
 
+const { exec } = require("child_process");
+const util = require("util");
+const crypto = require("crypto");
+const execPromise = util.promisify(exec);
+const os = require("os");
+
+async function convertJp2ToJpegBase64(base64Data) {
+  if (!base64Data) return base64Data;
+  const cleanedBase64 = base64Data.trim();
+  if (!cleanedBase64.startsWith("AAAADGpQ")) return cleanedBase64;
+
+  const tmpId = crypto.randomBytes(8).toString("hex");
+  const inPath = path.join(os.tmpdir(), `in_${tmpId}.jp2`);
+  const outPath = path.join(os.tmpdir(), `out_${tmpId}.jpg`);
+  
+  try {
+    fs.writeFileSync(inPath, Buffer.from(cleanedBase64, "base64"));
+    // Sử dụng ffmpeg để chuyển đổi (tối ưu và ổn định trên Linux/Docker)
+    await execPromise(`ffmpeg -i "${inPath}" "${outPath}" -y`);
+    
+    if (fs.existsSync(outPath)) {
+      const outBase64 = fs.readFileSync(outPath, "base64");
+      fs.unlinkSync(inPath);
+      fs.unlinkSync(outPath);
+      return outBase64;
+    }
+  } catch (error) {
+    console.error("Image conversion failed:", error.message);
+  } finally {
+    // Dọn dẹp file tạm nếu có lỗi xảy ra giữa chừng
+    if (fs.existsSync(inPath)) fs.unlinkSync(inPath);
+    if (fs.existsSync(outPath)) fs.unlinkSync(outPath);
+  }
+  return cleanedBase64;
+}
+
 router.post("/uploadxml", upload.array("files", 15), (req, res) => {
   let dataFromAllFiles = [];
 
@@ -794,27 +841,30 @@ router.post("/uploadxml", upload.array("files", 15), (req, res) => {
     return new Promise((resolve, reject) => {
       const filePath = file.path;
 
-      // const fileName = path.basename(
-      //   file.originalname,
-      //   path.extname(file.originalname)
-      // );
-      // const parts = fileName.split("_");
-      // const maKhoaHoc = parts[3]; // Extract the full course code
-      // const khoaHoc = maKhoaHoc.substring(maKhoaHoc.indexOf("K"));
-
-      // Read and parse the XML file
       fs.readFile(filePath, "utf8", (err, data) => {
         if (err) {
           return reject("Error reading file");
         }
 
-        xml2js.parseString(data, (err, result) => {
+        xml2js.parseString(data, async (err, result) => {
           if (err) {
             return reject("Error parsing XML");
           }
 
-          let khoaHoc = result.BAO_CAO1.DATA[0].KHOA_HOC[0].TEN_KHOA_HOC[0];
-          const maKhoaHoc = result.BAO_CAO1.DATA[0].KHOA_HOC[0].MA_KHOA_HOC[0];
+          let dataNode = null;
+          let isDangKyKhoaHoc = false;
+
+          if (result.BAO_CAO1 && result.BAO_CAO1.DATA) {
+            dataNode = result.BAO_CAO1.DATA[0];
+          } else if (result.DANG_KY_KHOA_HOC && result.DANG_KY_KHOA_HOC.DATA) {
+            dataNode = result.DANG_KY_KHOA_HOC.DATA[0];
+            isDangKyKhoaHoc = true;
+          } else {
+            return reject("Invalid XML format: Missing DATA node");
+          }
+
+          let khoaHoc = dataNode.KHOA_HOC[0].TEN_KHOA_HOC[0];
+          const maKhoaHoc = dataNode.KHOA_HOC[0].MA_KHOA_HOC[0];
           
           let loaiKhoaHoc = "";
           if (khoaHoc) {
@@ -827,30 +877,50 @@ router.post("/uploadxml", upload.array("files", 15), (req, res) => {
             }
           }
 
-          // Assuming the XML structure, convert it to a usable format
-          const dataFromXml = result.BAO_CAO1.DATA[0].NGUOI_LXS[0].NGUOI_LX.map(
-            (lx) => ({
-              STT: lx.SO_TT[0],
-              MaHocVien: lx.MA_DK[0],
-              KhoaHoc: khoaHoc,
-              LoaiKhoaHoc: loaiKhoaHoc,
-              MaKhoaHoc: maKhoaHoc,
-              HoTen: lx.HO_VA_TEN[0],
-              NgaySinh: formatDate(lx.NGAY_SINH[0]),
-              GioiTinh: formatGender(lx.GIOI_TINH[0]),
-              SoCMT: lx.SO_CMT[0],
-              NgayCapCMT: lx.NGAY_CAP_CMT[0],
-              NoiCapCMT: lx.NOI_CAP_CMT[0],
-              NgayNhanHoSo: lx.HO_SO[0].NGAY_NHAN_HOSO[0],
-              SoGPLX: lx.SO_GPLX_DA_CO ? lx.SO_GPLX_DA_CO[0] : "",
-              HangGPLX: lx.HANG_GPLX_DA_CO ? lx.HANG_GPLX_DA_CO[0] : "",
-              NoiCapGPLX: lx.DV_CAP_GPLX_DACO ? lx.DV_CAP_GPLX_DACO[0] : "",
-              Anh: lx.HO_SO[0].ANH_CHAN_DUNG[0], // Assuming this field contains the URL of the image
-            })
-          );
+          const lxArray = dataNode.NGUOI_LXS[0].NGUOI_LX || [];
+          
+          try {
+            const dataFromXml = [];
+            
+            // Xử lý song song theo từng lô (batch) 15 ảnh để tối ưu tốc độ và tránh quá tải CPU/RAM
+            const BATCH_SIZE = 15;
+            for (let i = 0; i < lxArray.length; i += BATCH_SIZE) {
+              const batch = lxArray.slice(i, i + BATCH_SIZE);
+              
+              const batchResults = await Promise.all(batch.map(async (lx) => {
+                let anhBase64 = lx.HO_SO[0].ANH_CHAN_DUNG ? lx.HO_SO[0].ANH_CHAN_DUNG[0] : "";
+                let convertedAnh = await convertJp2ToJpegBase64(anhBase64);
+                
+                let maHocVien = isDangKyKhoaHoc && lx.MA_DANG_KY ? lx.MA_DANG_KY[0] : (lx.MA_DK ? lx.MA_DK[0] : "");
 
-          dataFromAllFiles = dataFromAllFiles.concat(dataFromXml);
-          resolve();
+                return {
+                  STT: lx.SO_TT[0],
+                  MaHocVien: maHocVien,
+                  KhoaHoc: khoaHoc,
+                  LoaiKhoaHoc: loaiKhoaHoc,
+                  MaKhoaHoc: maKhoaHoc,
+                  HoTen: lx.HO_VA_TEN[0],
+                  NgaySinh: formatDate(lx.NGAY_SINH[0]),
+                  GioiTinh: formatGender(lx.GIOI_TINH[0]),
+                  SoCMT: lx.SO_CMT[0],
+                  NgayCapCMT: lx.NGAY_CAP_CMT[0],
+                  NoiCapCMT: lx.NOI_CAP_CMT[0],
+                  NgayNhanHoSo: lx.HO_SO[0].NGAY_NHAN_HOSO[0],
+                  SoGPLX: lx.SO_GPLX_DA_CO ? lx.SO_GPLX_DA_CO[0] : "",
+                  HangGPLX: lx.HANG_GPLX_DA_CO ? lx.HANG_GPLX_DA_CO[0] : "",
+                  NoiCapGPLX: lx.DV_CAP_GPLX_DACO ? lx.DV_CAP_GPLX_DACO[0] : "",
+                  Anh: convertedAnh,
+                };
+              }));
+              
+              dataFromXml.push(...batchResults);
+            }
+
+            dataFromAllFiles = dataFromAllFiles.concat(dataFromXml);
+            resolve();
+          } catch (error) {
+            reject(error);
+          }
         });
       });
     });
@@ -1166,6 +1236,17 @@ router.get("/computeData", async (req, res) => {
         : [];
       queryObj.KhoaHoc = { $in: selectedKhoaHoc };
       const total = await Total.find(queryObj).lean();
+
+      // Gắn thêm ảnh vào `total` chỉ để hiển thị UI (không lưu vào DB Total để tránh nặng file xuất Excel)
+      const studentIds = total.map((t) => t.MaHocVien);
+      const students = await Student.find({ MaHocVien: { $in: studentIds } }, 'MaHocVien Anh').lean();
+      const studentImageMap = {};
+      students.forEach((s) => {
+          if (s.Anh) studentImageMap[s.MaHocVien] = s.Anh;
+      });
+      total.forEach((t) => {
+          t.Anh = studentImageMap[t.MaHocVien] || "";
+      });
 
       res.render("total", {
         total,
