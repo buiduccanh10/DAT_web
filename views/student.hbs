@@ -35,7 +35,13 @@
             {{#each student}}
             <tr>
                 <td>{{ this.MaHocVien}}</td>
-                <td><img src="data:image/jpeg;base64,{{ this.Anh}}" style="height: 130px; width:100px;" alt="Ảnh"></td>
+                <td>
+                  {{#if this._id}}
+                    <img loading="lazy" src="/student-image/{{this._id}}" style="height: 130px; width:100px; object-fit: cover;" alt="Ảnh">
+                  {{else}}
+                    <span style="display:inline-block; height:130px; width:100px; background:#f0f0f0;"></span>
+                  {{/if}}
+                </td>
                 <td>{{this.KhoaHoc}}</td>
                 <td>{{ this.HoTen}}</td>
                 <td>{{ this.NgaySinh}}</td>

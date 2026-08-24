@@ -55,7 +55,8 @@ router.get("/allCar", async function (req, res, next) {
 });
 
 router.get("/allStudent", async function (req, res, next) {
-  const student = await Student.find({}).lean();
+  // Exclude 'Anh' to prevent massive HTML payloads and speed up load time significantly
+  const student = await Student.find({}).select('-Anh').lean();
 
   student.sort((a, b) => {
     return parseInt(a.STT) - parseInt(b.STT);
@@ -64,6 +65,41 @@ router.get("/allStudent", async function (req, res, next) {
   res.render("student", { student });
 });
 
+router.get("/student-image/:id", async function (req, res, next) {
+  try {
+    const student = await Student.findById(req.params.id).select('Anh').lean();
+    if (student && student.Anh) {
+      const imgBuffer = Buffer.from(student.Anh, 'base64');
+      res.writeHead(200, {
+        'Content-Type': 'image/jpeg',
+        'Content-Length': imgBuffer.length
+      });
+      res.end(imgBuffer);
+    } else {
+      res.status(404).send('No image found');
+    }
+  } catch (err) {
+    res.status(500).send('Error');
+  }
+});
+
+router.get("/student-image-by-mahv/:mahv", async function (req, res, next) {
+  try {
+    const student = await Student.findOne({ MaHocVien: req.params.mahv }).select('Anh').lean();
+    if (student && student.Anh) {
+      const imgBuffer = Buffer.from(student.Anh, 'base64');
+      res.writeHead(200, {
+        'Content-Type': 'image/jpeg',
+        'Content-Length': imgBuffer.length
+      });
+      res.end(imgBuffer);
+    } else {
+      res.status(404).send('No image found');
+    }
+  } catch (err) {
+    res.status(500).send('Error');
+  }
+});
 router.get("/allDat_session", async function (req, res, next) {
   const distinctTenDanhSach = await DAT.distinct("TenDanhSachDAT").lean();
   // const dat_ss = await Dat_session.find({TenDanhSachDAT:});
@@ -775,16 +811,7 @@ router.get("/save-dat-session", async (req, res) => {
     const dat_ss = await Dat_session.find({ TenDanhSachDAT: query }).lean();
     const distinctTenDanhSach = await DAT.distinct("TenDanhSachDAT").lean();
 
-    // Gắn thêm ảnh vào `dat_ss` chỉ để hiển thị UI
-    const studentIds = dat_ss.map(s => s.MaHocVien);
-    const students = await Student.find({ MaHocVien: { $in: studentIds } }, 'MaHocVien Anh').lean();
-    const studentImageMap = {};
-    students.forEach(s => {
-      if (s.Anh) studentImageMap[s.MaHocVien] = s.Anh;
-    });
-    dat_ss.forEach(s => {
-      s.Anh = studentImageMap[s.MaHocVien] || "";
-    });
+    // Gắn thêm ảnh vào `dat_ss` đã được chuyển sang cơ chế Lazy Load qua API `/student-image-by-mahv`
 
     // Render the view with fetched data
     res.render("allDat_session", { dat_ss, query, distinctTenDanhSach });
@@ -1237,16 +1264,7 @@ router.get("/computeData", async (req, res) => {
       queryObj.KhoaHoc = { $in: selectedKhoaHoc };
       const total = await Total.find(queryObj).lean();
 
-      // Gắn thêm ảnh vào `total` chỉ để hiển thị UI (không lưu vào DB Total để tránh nặng file xuất Excel)
-      const studentIds = total.map((t) => t.MaHocVien);
-      const students = await Student.find({ MaHocVien: { $in: studentIds } }, 'MaHocVien Anh').lean();
-      const studentImageMap = {};
-      students.forEach((s) => {
-          if (s.Anh) studentImageMap[s.MaHocVien] = s.Anh;
-      });
-      total.forEach((t) => {
-          t.Anh = studentImageMap[t.MaHocVien] || "";
-      });
+      // Gắn thêm ảnh vào `total` đã được chuyển sang cơ chế Lazy Load qua API `/student-image-by-mahv`
 
       res.render("total", {
         total,
