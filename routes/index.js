@@ -842,8 +842,8 @@ async function convertJp2ToJpegBase64(base64Data) {
   
   try {
     fs.writeFileSync(inPath, Buffer.from(cleanedBase64, "base64"));
-    // Sử dụng ffmpeg để chuyển đổi (tối ưu và ổn định trên Linux/Docker)
-    await execPromise(`ffmpeg -i "${inPath}" "${outPath}" -y`);
+    // Sử dụng ffmpeg để chuyển đổi, ĐỒNG THỜI nén và thu nhỏ ảnh (scale=200px) để lưu DB cực nhẹ
+    await execPromise(`ffmpeg -i "${inPath}" -vf "scale=200:-1" -q:v 5 "${outPath}" -y`);
     
     if (fs.existsSync(outPath)) {
       const outBase64 = fs.readFileSync(outPath, "base64");
