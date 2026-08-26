@@ -334,16 +334,11 @@ router.post("/save-dat", async (req, res) => {
 router.get("/save-dat-session", async (req, res) => {
   const query = req.query.tenDanhSach;
 
-  const data = await DAT.find({ TenDanhSachDAT: query }).lean();
-
-  if (data) {
-    for (const item of data) {
-      await Dat_session.findOneAndDelete({
-        MaHocVien: item.MaHocVien,
-        TenDanhSachDAT: query,
-      });
-    }
+  if (query) {
+    await Dat_session.deleteMany({ TenDanhSachDAT: query });
   }
+
+  const data = await DAT.find({ TenDanhSachDAT: query }).lean();
 
   const cars = await Car.find({ LoaiHangXe: "B11" });
   const dateDATs = await dateDAT.find({}).lean();
@@ -1021,9 +1016,14 @@ router.post("/updateSession", async (req, res) => {
 router.get("/computeData", async (req, res) => {
   const query = req.query.tenDanhSach;
   try {
+    let tenDanhSachFilter = query;
+    if (query && query.includes(',')) {
+      tenDanhSachFilter = { $in: query.split(',').map(s => s.trim()) };
+    }
+
     const dat_ss = await Dat_session.find({
       TrangThai: false,
-      TenDanhSachDAT: query,
+      TenDanhSachDAT: tenDanhSachFilter,
     }).lean();
 
     const studentMap = new Map();
@@ -1044,7 +1044,6 @@ router.get("/computeData", async (req, res) => {
           totalDuration: 0,
           totalDistance: 0,
           sessions: [],
-          // KhoaHoc: new Set(),
           XeTapLai: new Set(),
           B1: new Set(),
           B2: new Set(),
@@ -1068,7 +1067,6 @@ router.get("/computeData", async (req, res) => {
         col.TotalMorningDistance + col.TotalEveningDistance;
 
       studentData.sessions.push(col);
-      // studentData.KhoaHoc.add(col.KhoaHoc);
       studentData.XeTapLai.add(col.XeTapLai);
     });
 
@@ -1077,7 +1075,7 @@ router.get("/computeData", async (req, res) => {
     for (const [studentId, data] of studentMap.entries()) {
       const allSessions = await Dat_session.find({
         MaHocVien: studentId,
-        TenDanhSachDAT: query,
+        TenDanhSachDAT: tenDanhSachFilter,
       }).lean();
       let totalDuration = 0;
       let totalDistance = 0;
@@ -1092,10 +1090,10 @@ router.get("/computeData", async (req, res) => {
 
       if (!student) {
         missingStudents.push(studentId);
-        continue;
       }
 
       const studentSessions = data.sessions;
+      const firstSession = studentSessions[0] || (allSessions[0] || {});
       let category = "Unknown";
       let reasons = [];
 
@@ -1104,6 +1102,9 @@ router.get("/computeData", async (req, res) => {
         const mapped = mapCategory(session.LoaiKhoaHoc, session.KhoaHoc);
         if (mapped !== "Unknown") category = mapped;
       });
+      if (category === "Unknown" && student) {
+        category = mapCategory(student.LoaiKhoaHoc, student.KhoaHoc);
+      }
       let studentStatus = false;
 
       if (category === "B1") {
@@ -1171,10 +1172,9 @@ router.get("/computeData", async (req, res) => {
 
       updatedStudents.push({
         MaHocVien: studentId,
-        // Anh: student ? student.Anh : "",
-        KhoaHoc: student.KhoaHoc,
-        MaKhoaHoc: student.MaKhoaHoc,
-        HoTen: student ? student.HoTen : "",
+        KhoaHoc: student ? student.KhoaHoc : (firstSession.KhoaHoc || ""),
+        MaKhoaHoc: student ? student.MaKhoaHoc : (firstSession.MaKhoaHoc || ""),
+        HoTen: student ? student.HoTen : (firstSession.HoTen || ""),
         NgaySinh: student ? student.NgaySinh : "",
         GioiTinh: student ? student.GioiTinh : "",
         SoCMT: student ? student.SoCMT : "",
@@ -1184,8 +1184,6 @@ router.get("/computeData", async (req, res) => {
         TotalEveningTime: formatTime(data.totalEveningTime),
         TotalMorningDistance: data.totalMorningDistance.toFixed(2),
         TotalEveningDistance: data.totalEveningDistance.toFixed(2),
-        // TotalDuration: formatTime(data.totalDuration),
-        // TotalDistance: data.totalDistance.toFixed(2),
         TotalDuration: formatTime(totalDuration),
         TotalDistance: totalDistance.toFixed(2),
         Category: category,
@@ -1200,14 +1198,14 @@ router.get("/computeData", async (req, res) => {
 
     const filter = {
       MaHocVien: { $in: updatedStudents.map((student) => student.MaHocVien) },
-      TenDanhSachDAT: query,
+      TenDanhSachDAT: tenDanhSachFilter,
     };
 
     await Total.deleteMany(filter);
 
     await Total.create(updatedStudents);
 
-    const existingTotalStudents = await Total.find({ TenDanhSachDAT: query }).lean();
+    const existingTotalStudents = await Total.find({ TenDanhSachDAT: tenDanhSachFilter }).lean();
     const existingTotalIdSet = new Set(
       existingTotalStudents.map((student) => student.MaHocVien)
     );
@@ -1220,7 +1218,6 @@ router.get("/computeData", async (req, res) => {
       if (!existingTotalIdSet.has(student.MaHocVien)) {
         const newTotal = new Total({
           MaHocVien: student.MaHocVien,
-          // Anh: student.Anh,
           HoTen: student.HoTen,
           SoCMT: student.SoCMT,
           GioiTinh: student.GioiTinh,
@@ -1251,7 +1248,7 @@ router.get("/computeData", async (req, res) => {
 
     let queryObj = {};
     if (query) {
-      queryObj.TenDanhSachDAT = query;
+      queryObj.TenDanhSachDAT = tenDanhSachFilter;
     }
 
     const distinctKhoaHoc = await Total.distinct("KhoaHoc", queryObj);
@@ -1267,8 +1264,6 @@ router.get("/computeData", async (req, res) => {
         : [];
       queryObj.KhoaHoc = { $in: selectedKhoaHoc };
       const total = await Total.find(queryObj).lean();
-
-      // Gắn thêm ảnh vào `total` đã được chuyển sang cơ chế Lazy Load qua API `/student-image-by-mahv`
 
       res.render("total", {
         total,
