@@ -15,6 +15,12 @@ const dateDAT = require("../model/dateDAT");
 const studentDateDAT = require("../model/studentDateDAT");
 const excel = require("excel4node");
 
+function isAutoCar(loaiHang) {
+  if (!loaiHang) return false;
+  const hang = String(loaiHang).trim().toUpperCase();
+  return hang === "B11" || hang === "B1";
+}
+
 /* GET home page. */
 router.get("/", function (req, res, next) {
   res.render("index", { layout: "layout" });
@@ -340,7 +346,7 @@ router.get("/save-dat-session", async (req, res) => {
 
   const data = await DAT.find({ TenDanhSachDAT: query }).lean();
 
-  const cars = await Car.find({ LoaiHangXe: "B11" });
+  const cars = await Car.find({}).lean();
   const dateDATs = await dateDAT.find({}).lean();
 
   if (!data || data.length === 0) {
@@ -384,7 +390,7 @@ router.get("/save-dat-session", async (req, res) => {
     // - Nếu xe không thuộc danh sách B11, fallback đọc từ cột Thời gian lái xe số tự động từ file DAT (nếu có).
     let thoiGianXeTuDong = 0;
     let quangDuongXeTuDong = 0;
-    if (matchingCar && matchingCar.LoaiHangXe === "B11") {
+    if (matchingCar && isAutoCar(matchingCar.LoaiHangXe)) {
       thoiGianXeTuDong = thoiGianPhut;
       quangDuongXeTuDong = tongQuangDuong;
     } else {
@@ -439,7 +445,7 @@ router.get("/save-dat-session", async (req, res) => {
     // Kiểm tra học viên hạng không phải B1 đi xe B11 (số tự động) vào ban đêm
     if (
       matchingCar &&
-      matchingCar.LoaiHangXe === "B11" &&
+      isAutoCar(matchingCar.LoaiHangXe) &&
       thoiGianToi > 0
     ) {
       const category = mapCategory(item.LoaiKhoaHoc, item.KhoaHoc);
@@ -773,7 +779,7 @@ router.get("/save-dat-session", async (req, res) => {
         const matchingCar = cars.find((car) => car.BienSoXe === vehicle);
         if (
           matchingCar &&
-          matchingCar.LoaiHangXe === "B11" &&
+          isAutoCar(matchingCar.LoaiHangXe) &&
           studentCount > 35
         ) {
           const violationReason = `Xe ${vehicle} trong khóa học ${course} chỉ cho phép tối đa 35 học viên, hiện có ${studentCount} học viên`;
@@ -1160,7 +1166,7 @@ router.get("/computeData", async (req, res) => {
       for (let bienSoXe of xeTapLaiList) {
         const car = await Car.findOne({ BienSoXe: bienSoXe }).lean();
         if (car) {
-          if (car.LoaiHangXe === "B11") {
+          if (isAutoCar(car.LoaiHangXe)) {
             data.B1.add(bienSoXe);
           } else if (car.LoaiHangXe === "B2") {
             data.B2.add(bienSoXe);
