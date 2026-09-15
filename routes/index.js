@@ -752,6 +752,64 @@ router.get("/save-dat-session", async (req, res) => {
     }
   }
 
+  // Nhóm các phiên theo ngày và xe
+  const dateVehicleGroups = {};
+  sessions.forEach((session) => {
+    const category = mapCategory(session.LoaiKhoaHoc, session.KhoaHoc);
+    if (category === "B2" || category === "C") {
+      const date = moment(session.NgayDaoTao, ["DD/MM/YYYY HH:mm:ss", "DD/MM/YY HH:mm"]).format("DD/MM/YY");
+      const vehicle = session.XeTapLai;
+      if (!dateVehicleGroups[date]) dateVehicleGroups[date] = {};
+      if (!dateVehicleGroups[date][vehicle]) dateVehicleGroups[date][vehicle] = new Set();
+      dateVehicleGroups[date][vehicle].add(session.MaHocVien);
+    }
+  });
+
+  for (const date in dateVehicleGroups) {
+    for (const vehicle in dateVehicleGroups[date]) {
+      const studentCount = dateVehicleGroups[date][vehicle].size;
+      if (studentCount > 1) {
+        const matchingCar = cars.find((car) => car.BienSoXe === vehicle);
+        if (matchingCar && isAutoCar(matchingCar.LoaiHangXe)) {
+          const violationReason = `Ngày ${date} xe tự động ${vehicle} có ${studentCount} học viên`;
+          sessions.forEach((session) => {
+            const category = mapCategory(session.LoaiKhoaHoc, session.KhoaHoc);
+            if (category === "B2" || category === "C") {
+              const sessionDate = moment(session.NgayDaoTao, ["DD/MM/YYYY HH:mm:ss", "DD/MM/YY HH:mm"]).format("DD/MM/YY");
+              if (sessionDate === date && session.XeTapLai === vehicle) {
+                session.TrangThai = true;
+                if (session.LyDoLoai) {
+                  if (!session.LyDoLoai.includes(violationReason)) {
+                    session.LyDoLoai += `, ${violationReason}`;
+                  }
+                } else {
+                  session.LyDoLoai = violationReason;
+                }
+                updates.push(session);
+              }
+            }
+          });
+        }
+      }
+    }
+  }
+
+  // Cập nhật số thứ tự STT cho toàn bộ phiên của học viên
+  for (const [studentId, dateMap] of studentMap.entries()) {
+    if (!studentId) continue;
+    const allStudentSessions = await Dat_session.find({ MaHocVien: studentId }).lean();
+    allStudentSessions.sort((a, b) => {
+        const timeA = moment(a.NgayDaoTao, ["DD/MM/YYYY HH:mm:ss", "DD/MM/YY HH:mm"]).valueOf();
+        const timeB = moment(b.NgayDaoTao, ["DD/MM/YYYY HH:mm:ss", "DD/MM/YY HH:mm"]).valueOf();
+        if (isNaN(timeA) || isNaN(timeB)) return (a.STT || 0) - (b.STT || 0);
+        return timeA - timeB;
+    });
+    for (let i = 0; i < allStudentSessions.length; i++) {
+        const s = allStudentSessions[i];
+        await Dat_session.updateOne({ _id: s._id }, { $set: { STT: i + 1 } });
+    }
+  }
+
   // Nhóm các phiên theo khóa học và xe
   const courseVehicleGroups = {}; // Cấu trúc: { [KhoaHoc]: { [XeTapLai]: Set(MaHocVien) } }
   sessions.forEach((session) => {
@@ -809,7 +867,7 @@ router.get("/save-dat-session", async (req, res) => {
         { $set: { TrangThai: update.TrangThai, LyDoLoai: update.LyDoLoai } }
       );
     }
-    const dat_ss = await Dat_session.find({ TenDanhSachDAT: query }).lean();
+    const dat_ss = await Dat_session.find({ TenDanhSachDAT: query }).sort({ KhoaHoc: 1, MaHocVien: 1, STT: 1 }).lean();
     const distinctTenDanhSach = await DAT.distinct("TenDanhSachDAT").lean();
 
     // Gắn thêm ảnh vào `dat_ss` đã được chuyển sang cơ chế Lazy Load qua API `/student-image-by-mahv`
@@ -1086,10 +1144,13 @@ router.get("/computeData", async (req, res) => {
       let totalDuration = 0;
       let totalDistance = 0;
 
+      let tongQuangDuongB11_all = 0;
+      let tongThoiGianB11_all = 0;
       allSessions.forEach((session) => {
         totalDuration += session.TotalMorningTime + session.TotalEveningTime;
-        totalDistance +=
-          session.TotalMorningDistance + session.TotalEveningDistance;
+        totalDistance += session.TotalMorningDistance + session.TotalEveningDistance;
+        tongQuangDuongB11_all += session.QuangDuongXeTuDong || 0;
+        tongThoiGianB11_all += session.ThoiGianXeTuDong || 0;
       });
 
       const student = await Student.findOne({ MaHocVien: studentId });
@@ -1113,6 +1174,54 @@ router.get("/computeData", async (req, res) => {
       }
       let studentStatus = false;
 
+      if (category === "B2") {
+        const maxAutoDistB = 80;
+        const maxAutoTimeB = 95; // 1h35p
+        
+        if (data.TongQuangDuongB11 > maxAutoDistB) {
+          const excessDist = data.TongQuangDuongB11 - maxAutoDistB;
+          data.TongQuangDuongB11 = maxAutoDistB;
+          data.totalDistance -= excessDist;
+        }
+        if (data.TongThoiGianB11 > maxAutoTimeB) {
+          const excessTime = data.TongThoiGianB11 - maxAutoTimeB;
+          data.TongThoiGianB11 = maxAutoTimeB;
+          data.totalDuration -= excessTime;
+        }
+
+        if (tongQuangDuongB11_all > maxAutoDistB) {
+          totalDistance -= (tongQuangDuongB11_all - maxAutoDistB);
+          tongQuangDuongB11_all = maxAutoDistB;
+        }
+        if (tongThoiGianB11_all > maxAutoTimeB) {
+          totalDuration -= (tongThoiGianB11_all - maxAutoTimeB);
+          tongThoiGianB11_all = maxAutoTimeB;
+        }
+      } else if (category === "C") {
+        const maxAutoDistC = 50;
+        const maxAutoTimeC = 65; // 1h5p
+
+        if (data.TongQuangDuongB11 > maxAutoDistC) {
+          const excessDist = data.TongQuangDuongB11 - maxAutoDistC;
+          data.TongQuangDuongB11 = maxAutoDistC;
+          data.totalDistance -= excessDist;
+        }
+        if (data.TongThoiGianB11 > maxAutoTimeC) {
+          const excessTime = data.TongThoiGianB11 - maxAutoTimeC;
+          data.TongThoiGianB11 = maxAutoTimeC;
+          data.totalDuration -= excessTime;
+        }
+
+        if (tongQuangDuongB11_all > maxAutoDistC) {
+          totalDistance -= (tongQuangDuongB11_all - maxAutoDistC);
+          tongQuangDuongB11_all = maxAutoDistC;
+        }
+        if (tongThoiGianB11_all > maxAutoTimeC) {
+          totalDuration -= (tongThoiGianB11_all - maxAutoTimeC);
+          tongThoiGianB11_all = maxAutoTimeC;
+        }
+      }
+
       if (category === "B1") {
         if (data.totalDuration < 720) reasons.push("Thời gian chưa đạt 12 giờ");
         if (data.totalDistance < 710)
@@ -1123,9 +1232,8 @@ router.get("/computeData", async (req, res) => {
           reasons.push("Quãng đường tối chưa đạt 100km");
         studentStatus = reasons.length > 0;
       } else if (category === "B2") {
-        if (data.TongThoiGianB11 < 90) reasons.push("Chưa đi đủ thời gian B11");
-        if (data.TongQuangDuongB11 < 30)
-          reasons.push("Chưa đi đủ quãng đường B11");
+        if (data.TongQuangDuongB11 < 60)
+          reasons.push("Chưa đi đủ quãng đường B11 (tối thiểu 60km)");
         if (data.totalDuration < 1200)
           reasons.push("Thời gian chưa đạt 20 giờ");
         if (data.totalDistance < 810)
@@ -1136,9 +1244,8 @@ router.get("/computeData", async (req, res) => {
           reasons.push("Quãng đường tối chưa đạt 100km");
         studentStatus = reasons.length > 0;
       } else if (category === "C") {
-        if (data.TongThoiGianB11 < 60) reasons.push("Chưa đi đủ thời gian B11");
-        if (data.TongQuangDuongB11 < 30)
-          reasons.push("Chưa đi đủ quãng đường B11");
+        if (data.TongQuangDuongB11 < 40)
+          reasons.push("Chưa đi đủ quãng đường B11 (tối thiểu 40km)");
         if (data.totalDuration < 1440)
           reasons.push("Thời gian chưa đạt 24 giờ");
         if (data.totalDistance < 825)
