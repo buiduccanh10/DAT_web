@@ -1228,6 +1228,8 @@ router.get("/computeData", async (req, res) => {
           reasons.push("Quãng đường chưa đạt 710km");
         if (data.totalEveningTime < 150)
           reasons.push("Thời gian tối chưa đạt 2.5 giờ");
+        if (data.totalEveningTime > 300)
+          reasons.push("Thời gian tối quá 5 giờ");
         if (data.totalEveningDistance < 100)
           reasons.push("Quãng đường tối chưa đạt 100km");
         studentStatus = reasons.length > 0;
@@ -1240,6 +1242,8 @@ router.get("/computeData", async (req, res) => {
           reasons.push("Quãng đường chưa đạt 810km");
         if (data.totalEveningTime < 150)
           reasons.push("Thời gian tối chưa đạt 2.5 giờ");
+        if (data.totalEveningTime > 300)
+          reasons.push("Thời gian tối quá 5 giờ");
         if (data.totalEveningDistance < 100)
           reasons.push("Quãng đường tối chưa đạt 100km");
         studentStatus = reasons.length > 0;
@@ -1252,6 +1256,8 @@ router.get("/computeData", async (req, res) => {
           reasons.push("Quãng đường chưa đạt 825km");
         if (data.totalEveningTime < 150)
           reasons.push("Thời gian tối chưa đạt 2.5 giờ");
+        if (data.totalEveningTime > 300)
+          reasons.push("Thời gian tối quá 5 giờ");
         if (data.totalEveningDistance < 70)
           reasons.push("Quãng đường tối chưa đạt 70km");
         studentStatus = reasons.length > 0;
