@@ -328,25 +328,34 @@
 
 <script>
 
-document.getElementById("deleteTotal").addEventListener("click", function() {
-        if (confirm("Bạn có chắc chắn muốn xóa BC tổng hợp '{{query}}' này không?")) {
-          fetch(`/deleteComputeData?tenDanhSach={{query}}`, {
-            method: "DELETE",
-          })
-          .then(response => {
-            if (response.ok) {
-              alert("Đã xóa thành công!");
-               window.location.href = "/allTotal";
-            } else {
-              alert("Xóa thất bại, vui lòng thử lại.");
-            }
-          })
-          .catch(error => {
-            console.error("Error:", error);
-            alert("Xóa thất bại, vui lòng thử lại.");
-          });
+const deleteTotalBtn = document.getElementById("deleteTotal");
+if (deleteTotalBtn) {
+  deleteTotalBtn.addEventListener("click", function() {
+    const selectEl = document.getElementById("tenDanhSach");
+    const selectedName = ((selectEl && selectEl.value) ? selectEl.value : `{{query}}`).trim();
+    if (!selectedName) {
+      alert("Vui lòng chọn danh sách cần xóa!");
+      return;
+    }
+    if (confirm("Bạn có chắc chắn muốn xóa BC tổng hợp '" + selectedName + "' này không?")) {
+      fetch(`/deleteComputeData?tenDanhSach=` + encodeURIComponent(selectedName), {
+        method: "DELETE",
+      })
+      .then(response => {
+        if (response.ok) {
+          alert("Đã xóa thành công!");
+          window.location.href = "/allTotal";
+        } else {
+          alert("Xóa thất bại, vui lòng thử lại.");
         }
+      })
+      .catch(error => {
+        console.error("Error:", error);
+        alert("Xóa thất bại, vui lòng thử lại.");
       });
+    }
+  });
+}
 
 function toggleFilter() {
   const filterForm = document.getElementById('filterForm');

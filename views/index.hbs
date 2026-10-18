@@ -99,7 +99,7 @@
                 </thead>
                 <tbody>
                     {{#each data}}
-                    <tr>
+                    <tr data-trang-thai="{{lookup this 'Trạng thái'}}">
                         <td>{{lookup this 'STT'}}</td>
                         <td>{{lookup this 'Mã phiên học'}}</td>
                         <td>{{lookup this 'Tỉ lệ nhận diện'}}</td>
@@ -145,7 +145,7 @@
 
         document.getElementById('saveButton').addEventListener('click', function () {
             const rows = document.querySelectorAll('#data-table tbody tr');
-            const namelistss = document.getElementById('namelistss').value;
+            const namelistss = (document.getElementById('namelistss').value || '').trim();
             const data = [];
 
             if (!namelistss) {
@@ -172,7 +172,8 @@
                     QuangDuong: row.cells[14].textContent,
                     ThoiGianBanDem: row.cells[15].textContent,
                     ThoiGianXeTuDong: row.cells[16].textContent,
-                    TenDanhSachDAT: namelistss
+                    TenDanhSachDAT: namelistss,
+                    TrangThaiPhien: row.getAttribute('data-trang-thai') || ''
                 };
                 data.push(rowData);
             });

@@ -25,7 +25,8 @@ const dat_sessionSchema = new mongoose.Schema({
   TotalEveningTime: Number,
   TotalMorningDistance: Number,
   TotalEveningDistance: Number,
-  TenDanhSachDAT:String
+  TenDanhSachDAT: String,
+  TrangThaiPhien: String
 });
 
 const Dat_session = mongoose.model(

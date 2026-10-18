@@ -90,25 +90,34 @@
     </div>
 
     <script>
-      document.getElementById("deleteListSession").addEventListener("click", function() {
-        if (confirm("Bạn có chắc chắn muốn xóa DS phiên học '{{query}}' này không?")) {
-          fetch(`/delete-dat-session?tenDanhSach={{query}}`, {
-            method: "DELETE",
-          })
-          .then(response => {
-            if (response.ok) {
-              alert("Đã xóa thành công!");
-               window.location.href = "/allDat_session";
-            } else {
+      const deleteBtn = document.getElementById("deleteListSession");
+      if (deleteBtn) {
+        deleteBtn.addEventListener("click", function() {
+          const selectEl = document.getElementById("tenDanhSach");
+          const selectedName = ((selectEl && selectEl.value) ? selectEl.value : `{{query}}`).trim();
+          if (!selectedName) {
+            alert("Vui lòng chọn danh sách phiên học cần xóa!");
+            return;
+          }
+          if (confirm("Bạn có chắc chắn muốn xóa DS phiên học '" + selectedName + "' này không?")) {
+            fetch(`/delete-dat-session?tenDanhSach=` + encodeURIComponent(selectedName), {
+              method: "DELETE",
+            })
+            .then(response => {
+              if (response.ok) {
+                alert("Đã xóa thành công!");
+                window.location.href = "/allDat_session";
+              } else {
+                alert("Xóa thất bại, vui lòng thử lại.");
+              }
+            })
+            .catch(error => {
+              console.error("Error:", error);
               alert("Xóa thất bại, vui lòng thử lại.");
-            }
-          })
-          .catch(error => {
-            console.error("Error:", error);
-            alert("Xóa thất bại, vui lòng thử lại.");
-          });
-        }
-      });
+            });
+          }
+        });
+      }
     </script>
 
   </body>

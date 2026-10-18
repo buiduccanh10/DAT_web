@@ -119,12 +119,6 @@ router.get("/allTotal", async function (req, res, next) {
   res.render("total", { distinctTenDanhSach });
 });
 
-router.get("/allTotal", async function (req, res, next) {
-  const distinctTenDanhSach = await DAT.distinct("TenDanhSachDAT").lean();
-
-  res.render("total", { distinctTenDanhSach });
-});
-
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, "uploads/");
@@ -136,26 +130,12 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
-// File DAT mới có nhiều sheet, sheet đầu có thể chỉ chứa dòng tiêu đề (meta).
-// Chọn sheet đầu tiên có cả cột "STT" và "Mã phiên học" sau khi chuẩn hoá key.
-function pickDataSheet(workbook) {
-  for (const name of workbook.SheetNames) {
-    const sheet = workbook.Sheets[name];
-    const rows = xlsx.utils.sheet_to_json(sheet);
-    if (rows.length === 0) continue;
-    const keys = Object.keys(normalizeRow(rows[0]));
-    if (keys.includes("STT") && keys.includes("Mã phiên học")) {
-      return rows;
-    }
-  }
-  // Fallback: sheet đầu tiên
-  return xlsx.utils.sheet_to_json(
-    workbook.Sheets[workbook.SheetNames[0]]
-  );
+// Helper escape regex
+function escapeRegex(string) {
+  return String(string).replace(/[/\-\\^$*+?.()|[\]{}]/g, "\\$&");
 }
 
 // Chuẩn hoá key: bỏ ký tự xuống dòng (\n) và rút gọn khoảng trắng dư.
-// File DAT mới chứa tiêu đề cột có \n (vd "Thời gian bắt đầu\nphiên học").
 function normalizeRow(row) {
   const out = {};
   for (const key of Object.keys(row)) {
@@ -163,6 +143,40 @@ function normalizeRow(row) {
     out[cleanKey] = row[key];
   }
   return out;
+}
+
+// File DAT mới có thể có nhiều sheet, dòng tiêu đề có thể nằm ở dòng thứ 6 (sau meta).
+// Dò qua các dòng của sheet để tìm dòng chứa đồng thời cột "STT" và "Mã phiên học".
+function pickDataSheet(workbook) {
+  for (const name of workbook.SheetNames) {
+    const sheet = workbook.Sheets[name];
+    if (!sheet || !sheet["!ref"]) continue;
+
+    // Đọc dạng mảng các dòng (header: 1) để tìm vị trí dòng tiêu đề
+    const matrix = xlsx.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+    if (!matrix || matrix.length === 0) continue;
+
+    const maxCheckRows = Math.min(matrix.length, 25);
+    for (let r = 0; r < maxCheckRows; r++) {
+      const rowArr = matrix[r];
+      if (!Array.isArray(rowArr)) continue;
+      const cleanHeaders = rowArr.map((cell) =>
+        String(cell || "").replace(/\n/g, " ").replace(/\s+/g, " ").trim()
+      );
+      if (cleanHeaders.includes("STT") && cleanHeaders.includes("Mã phiên học")) {
+        const rows = xlsx.utils.sheet_to_json(sheet, { range: r, defval: "" });
+        if (rows.length > 0) {
+          return rows.filter((item) => {
+            const normalized = normalizeRow(item);
+            return normalized["Mã phiên học"] && String(normalized["Mã phiên học"]).trim() !== "";
+          });
+        }
+      }
+    }
+  }
+
+  // Fallback: sheet đầu tiên
+  return xlsx.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { defval: "" });
 }
 
 router.post("/upload", upload.single("file"), (req, res) => {
@@ -176,34 +190,120 @@ router.post("/upload", upload.single("file"), (req, res) => {
   data = data.map(normalizeRow);
 
   data = data.map((row) => {
-    let khoaHoc = row["Tên khóa học"] || "";
-    if (khoaHoc) {
-      if (khoaHoc.includes("C")) {
-        row["Loại khóa học"] = "C";
-      } else if (khoaHoc.includes(".")) {
-        row["Loại khóa học"] = "B1";
-      } else {
-        row["Loại khóa học"] = "B2";
+    // 1. Chuẩn hóa ngày giờ sang chuỗi DD/MM/YYYY HH:mm:ss chuẩn
+    const formatDateTimeField = (val) => {
+      if (!val) return "";
+      if (val instanceof Date) {
+        return moment(val).format("MM/DD/YYYY HH:mm:ss");
+      }
+      const s = String(val).trim();
+      if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+        const m = moment(s, "YYYY-MM-DD HH:mm:ss");
+        if (m.isValid()) return m.format("DD/MM/YYYY HH:mm:ss");
+      }
+      return s;
+    };
+
+    row["Thời gian bắt đầu phiên học"] = formatDateTimeField(row["Thời gian bắt đầu phiên học"]);
+    row["Thời gian kết thúc phiên học"] = formatDateTimeField(row["Thời gian kết thúc phiên học"]);
+    if (row["Thời gian máy chủ nhận phiên học"]) {
+      row["Thời gian máy chủ nhận phiên học"] = formatDateTimeField(row["Thời gian máy chủ nhận phiên học"]);
+    }
+    if (row["Thời gian máy chủ NCC, CSĐT nhận được dữ liệu"]) {
+      row["Thời gian máy chủ NCC, CSĐT nhận được dữ liệu"] = formatDateTimeField(row["Thời gian máy chủ NCC, CSĐT nhận được dữ liệu"]);
+    }
+
+    // 2. Chuẩn hóa Tên khóa học và Loại khóa học
+    const maKhoaHoc = String(row["Mã khóa học"] || "").trim();
+    const hangDaoTao = String(row["Hạng đào tạo"] || "").trim();
+    let loaiKhoaHoc = String(row["Loại khóa học"] || "").trim();
+    let tenKhoaHoc = String(row["Tên khóa học"] || "").trim();
+
+    if (!tenKhoaHoc && maKhoaHoc) {
+      const kMatch = maKhoaHoc.match(/K\d+[A-Z0-9.-]+/i);
+      tenKhoaHoc = kMatch ? kMatch[0] : maKhoaHoc;
+      const isAuto = /tự\s*động|b\.01|b11/i.test(hangDaoTao) || /tự\s*động|b\.01|b11/i.test(loaiKhoaHoc);
+      if (isAuto && !tenKhoaHoc.includes(".")) {
+        tenKhoaHoc = tenKhoaHoc.replace(/B01(\d+)/i, "B.01$1");
       }
     }
 
-    // Nếu Excel tự nhận diện là Date, tức là nó đã bị đọc ngược ngày/tháng (theo chuẩn US).
-    // Bằng cách format Date này thành MM/DD/YYYY, ta sẽ lấy lại ĐÚNG y chang chuỗi DD/MM/YYYY ban đầu!
-    if (row["Thời gian bắt đầu phiên học"] instanceof Date) {
-      row["Thời gian bắt đầu phiên học"] = moment(
-        row["Thời gian bắt đầu phiên học"]
-      ).format("MM/DD/YYYY HH:mm:ss");
+    if (
+      /tự\s*động|b\.01|b11/i.test(hangDaoTao) ||
+      /tự\s*động|b\.01|b11/i.test(loaiKhoaHoc) ||
+      (tenKhoaHoc && tenKhoaHoc.includes("."))
+    ) {
+      loaiKhoaHoc = "B1";
+    } else if (/cơ\s*khí/i.test(hangDaoTao) || loaiKhoaHoc === "B" || loaiKhoaHoc === "B2") {
+      loaiKhoaHoc = "B2";
+    } else if (
+      /\bC1\b|\bC\b|lên\s*D|lên\s*CE|lên\s*D2/i.test(hangDaoTao) ||
+      (tenKhoaHoc && (tenKhoaHoc.includes("C") || tenKhoaHoc.includes("D")))
+    ) {
+      loaiKhoaHoc = "C";
+    } else {
+      loaiKhoaHoc = mapCategory(loaiKhoaHoc, tenKhoaHoc);
     }
-    // Các cột mới của file DAT
-    if (row["Thời gian kết thúc phiên học"] instanceof Date) {
-      row["Thời gian kết thúc phiên học"] = moment(
-        row["Thời gian kết thúc phiên học"]
-      ).format("MM/DD/YYYY HH:mm:ss");
+
+    row["Tên khóa học"] = tenKhoaHoc;
+    row["Loại khóa học"] = loaiKhoaHoc;
+
+    // 3. Chuẩn hóa Thời gian lái xe ban đêm (giờ)
+    const rawNightHour = row["Thời gian lái xe ban đêm (giờ)"];
+    if (rawNightHour !== undefined && rawNightHour !== null && String(rawNightHour).trim() !== "") {
+      row["Thời gian lái xe ban đêm (giờ)"] = parseFloat(rawNightHour) || 0;
+    } else {
+      // Tự động tính theo mốc từ 18:00 trở đi
+      const thoiGianGio = parseFloat(row["Thời gian thực hành (giờ) (CSĐT truyền lên)"]) || 0;
+      const thoiGianPhut = Math.round(thoiGianGio * 60);
+
+      const startMoment = moment(row["Thời gian bắt đầu phiên học"], [
+        "DD/MM/YYYY HH:mm:ss",
+        "DD/MM/YY HH:mm",
+        "YYYY-MM-DD HH:mm:ss",
+      ]);
+      if (startMoment.isValid() && thoiGianPhut > 0) {
+        const cutoff18h = startMoment.clone().set({ hour: 18, minute: 0, second: 0 });
+        let thoiGianToiPhut = 0;
+
+        if (startMoment.isSameOrAfter(cutoff18h)) {
+          // Bắt đầu từ 18:00 trở đi -> toàn bộ thời gian thực hành là giờ tối
+          thoiGianToiPhut = thoiGianPhut;
+        } else {
+          // Bắt đầu trước 18:00
+          const endMoment = startMoment.clone().add(thoiGianPhut, "minutes");
+          if (endMoment.isAfter(cutoff18h)) {
+            const thoiGianSangPhut = Math.max(0, cutoff18h.diff(startMoment, "minutes"));
+            thoiGianToiPhut = Math.max(0, thoiGianPhut - thoiGianSangPhut);
+          }
+        }
+        row["Thời gian lái xe ban đêm (giờ)"] = parseFloat((thoiGianToiPhut / 60).toFixed(2));
+      } else {
+        row["Thời gian lái xe ban đêm (giờ)"] = 0;
+      }
     }
-    if (row["Thời gian máy chủ nhận phiên học"] instanceof Date) {
-      row["Thời gian máy chủ nhận phiên học"] = moment(
-        row["Thời gian máy chủ nhận phiên học"]
-      ).format("MM/DD/YYYY HH:mm:ss");
+
+    // 4. Chuẩn hóa Thời gian lái xe số tự động (nếu có)
+    if (
+      row["Thời gian lái xe số tự động (nếu có)"] === undefined ||
+      row["Thời gian lái xe số tự động (nếu có)"] === null ||
+      String(row["Thời gian lái xe số tự động (nếu có)"]).trim() === ""
+    ) {
+      row["Thời gian lái xe số tự động (nếu có)"] = 0;
+    }
+
+    // 5. Chuẩn hóa Tỉ lệ nhận diện và Trạng thái
+    const trangThai = String(row["Trạng thái"] || "").trim();
+    if (
+      row["Tỉ lệ nhận diện"] === undefined ||
+      row["Tỉ lệ nhận diện"] === null ||
+      String(row["Tỉ lệ nhận diện"]).trim() === ""
+    ) {
+      if (trangThai && /nhỏ\s*hơn\s*75%|< ?75%/i.test(trangThai)) {
+        row["Tỉ lệ nhận diện"] = 0;
+      } else {
+        row["Tỉ lệ nhận diện"] = 100;
+      }
     }
 
     return row;
@@ -305,30 +405,33 @@ router.post("/save-dat", async (req, res) => {
   const data = req.body;
 
   try {
-    for (const row of data) {
-      const dat = new DAT({
-        STT: row.STT,
-        MaPhien: row.MaPhien,
-        TiLe: row.TiLe,
-        KhoaHoc: row.KhoaHoc,
-        MaKhoaHoc: row.MaKhoaHoc,
-        LoaiKhoaHoc: row.LoaiKhoaHoc,
-        MaHocVien: row.MaHocVien,
-        HoTen: row.HoTen,
-        HoTenGiaoVien: row.HoTenGiaoVien,
-        MaGiaoVien: row.MaGiaoVien,
-        XeTapLai: row.XeTapLai,
-        NgayDaoTao: row.NgayDaoTao,
-        ThoiGianKetThuc: row.ThoiGianKetThuc,
-        ThoiGian: row.ThoiGian,
-        QuangDuong: row.QuangDuong,
-        ThoiGianBanDem: row.ThoiGianBanDem,
-        ThoiGianXeTuDong: row.ThoiGianXeTuDong,
-        TenDanhSachDAT: row.TenDanhSachDAT,
-      });
-
-      await dat.save();
+    if (!Array.isArray(data) || data.length === 0) {
+      return res.status(400).send("No data provided");
     }
+
+    const docsToInsert = data.map((row) => ({
+      STT: row.STT,
+      MaPhien: row.MaPhien,
+      TiLe: row.TiLe,
+      KhoaHoc: row.KhoaHoc,
+      MaKhoaHoc: row.MaKhoaHoc,
+      LoaiKhoaHoc: row.LoaiKhoaHoc,
+      MaHocVien: row.MaHocVien,
+      HoTen: row.HoTen,
+      HoTenGiaoVien: row.HoTenGiaoVien,
+      MaGiaoVien: row.MaGiaoVien,
+      XeTapLai: row.XeTapLai,
+      NgayDaoTao: row.NgayDaoTao,
+      ThoiGianKetThuc: row.ThoiGianKetThuc,
+      ThoiGian: row.ThoiGian,
+      QuangDuong: row.QuangDuong,
+      ThoiGianBanDem: row.ThoiGianBanDem,
+      ThoiGianXeTuDong: row.ThoiGianXeTuDong,
+      TenDanhSachDAT: String(row.TenDanhSachDAT || "").trim(),
+      TrangThaiPhien: row.TrangThaiPhien || "",
+    }));
+
+    await DAT.insertMany(docsToInsert);
 
     res.status(200).send("Data saved successfully!");
   } catch (err) {
@@ -489,6 +592,18 @@ router.get("/save-dat-session", async (req, res) => {
       lyDoLoaiList.push("Tốc độ dưới 25km/h");
     }
 
+    const hasStatusViolation = Boolean(
+      item.TrangThaiPhien &&
+      item.TrangThaiPhien.trim() !== "" &&
+      item.TrangThaiPhien.trim() !== "Khả dụng"
+    );
+    if (hasStatusViolation) {
+      const statusReason = item.TrangThaiPhien.trim();
+      if (!lyDoLoaiList.includes(statusReason) && !(statusReason.includes("75%") && tiLeLessThan75)) {
+        lyDoLoaiList.push(statusReason);
+      }
+    }
+
     // Kết hợp các lý do thành một chuỗi
     const lyDoLoai = lyDoLoaiList.join(", ");
 
@@ -500,8 +615,10 @@ router.get("/save-dat-session", async (req, res) => {
         thoiGianPhut <= 5 ||
         scheduleViolation ||
         tocDoQuaNhanh ||
-        tocDoQuaNhe,
+        tocDoQuaNhe ||
+        hasStatusViolation,
       LyDoLoai: lyDoLoai,
+      TrangThaiPhien: item.TrangThaiPhien || "",
       ThoiGianBanDem: thoiGianToi,
       ThoiGianXeTuDong: thoiGianXeTuDong,
       QuangDuongXeTuDong: quangDuongXeTuDong,
@@ -620,12 +737,16 @@ router.get("/save-dat-session", async (req, res) => {
         // Calculate time difference between sessions
         const startCurrent = moment(
           currentSession.NgayDaoTao,
-          "DD/MM/YY HH:mm"
+          ["DD/MM/YYYY HH:mm:ss", "DD/MM/YY HH:mm", "YYYY-MM-DD HH:mm:ss"]
         );
         const endCurrent = startCurrent
           .clone()
           .add(parseDuration(currentSession.ThoiGian), "minutes");
-        const startNext = moment(nextSession.NgayDaoTao, ["DD/MM/YYYY HH:mm:ss", "DD/MM/YY HH:mm"]);
+        const startNext = moment(nextSession.NgayDaoTao, [
+          "DD/MM/YYYY HH:mm:ss",
+          "DD/MM/YY HH:mm",
+          "YYYY-MM-DD HH:mm:ss",
+        ]);
 
         const breakTime = startNext.diff(endCurrent, "minutes");
 
@@ -659,8 +780,9 @@ router.get("/save-dat-session", async (req, res) => {
   // Group sessions by teacher and date
   sessions.forEach((session) => {
     const teacher = session.MaGiaoVien;
-    const date = moment(session.NgayDaoTao, ["DD/MM/YYYY HH:mm:ss", "DD/MM/YY HH:mm", "DD/MM/YY"]).format("DD/MM/YY");
-    const startDateTime = moment(session.NgayDaoTao, ["DD/MM/YYYY HH:mm:ss", "DD/MM/YY HH:mm"]);
+    if (!teacher) return;
+    const date = moment(session.NgayDaoTao, ["DD/MM/YYYY HH:mm:ss", "DD/MM/YY HH:mm", "DD/MM/YY", "YYYY-MM-DD HH:mm:ss"]).format("DD/MM/YY");
+    const startDateTime = moment(session.NgayDaoTao, ["DD/MM/YYYY HH:mm:ss", "DD/MM/YY HH:mm", "YYYY-MM-DD HH:mm:ss"]);
     const endDateTime = startDateTime
       .clone()
       .add(parseDuration(session.ThoiGian), "minutes");
@@ -685,15 +807,15 @@ router.get("/save-dat-session", async (req, res) => {
 
   for (const [teacher, dateMap] of teacherMap.entries()) {
     for (const [date, sessions] of dateMap.entries()) {
-      // Check if teacher exceeds 12 hours per day
+      // Check if teacher exceeds 10 hours per day (600 minutes)
       let totalTeachingTimePerDay = 0;
       sessions.forEach((sessionData) => {
         totalTeachingTimePerDay += parseDuration(sessionData.session.ThoiGian);
       });
 
-      if (totalTeachingTimePerDay > 720) {
-        // 720 minutes = 12 hours
-        const reason = `Giáo viên dạy quá 12 tiếng trong ngày ${date}`;
+      if (totalTeachingTimePerDay > 600) {
+        // 600 minutes = 10 hours
+        const reason = `Giáo viên dạy quá 10 tiếng trong ngày ${date}`;
         sessions.forEach((sessionData) => {
           const session = sessionData.session;
           session.TrangThai = true;
@@ -1814,11 +1936,23 @@ router.post("/submitDate", async (req, res) => {
 
 router.delete("/delete-dat-session", async (req, res) => {
   const { tenDanhSach } = req.query;
+  if (!tenDanhSach) {
+    return res.status(400).send("tenDanhSach is required");
+  }
+
+  const cleanName = String(tenDanhSach).trim();
+  const nameRegex = new RegExp("^\\s*" + escapeRegex(cleanName) + "\\s*$", "i");
+  const filter = {
+    $or: [
+      { TenDanhSachDAT: cleanName },
+      { TenDanhSachDAT: nameRegex },
+    ],
+  };
 
   try {
-    await Dat_session.deleteMany({ TenDanhSachDAT: tenDanhSach });
-    await DAT.deleteMany({ TenDanhSachDAT: tenDanhSach });
-    await Total.deleteMany({ TenDanhSachDAT: tenDanhSach });
+    await Dat_session.deleteMany(filter);
+    await DAT.deleteMany(filter);
+    await Total.deleteMany(filter);
 
     res.status(200).send("Deleted successfully");
   } catch (err) {
@@ -1829,9 +1963,24 @@ router.delete("/delete-dat-session", async (req, res) => {
 
 router.delete("/deleteComputeData", async (req, res) => {
   const { tenDanhSach } = req.query;
+  if (!tenDanhSach) {
+    return res.status(400).send("tenDanhSach is required");
+  }
+
+  const cleanName = String(tenDanhSach).trim();
+  const nameRegex = new RegExp("^\\s*" + escapeRegex(cleanName) + "\\s*$", "i");
+  const filter = {
+    $or: [
+      { TenDanhSachDAT: cleanName },
+      { TenDanhSachDAT: nameRegex },
+    ],
+  };
 
   try {
-    await Total.deleteMany({ TenDanhSachDAT: tenDanhSach });
+    await Total.deleteMany(filter);
+    await Dat_session.deleteMany(filter);
+    await DAT.deleteMany(filter);
+
     res.status(200).send("Deleted successfully");
   } catch (err) {
     console.error("Error deleting data:", err);

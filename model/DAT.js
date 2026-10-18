@@ -22,7 +22,8 @@ const DAT = new mongoose.Schema({
   MaThietBi: String,
   SoGTVT: String,
   CoSoDaoTao: String,
-  TenDanhSachDAT:String
+  TenDanhSachDAT: String,
+  TrangThaiPhien: String
 });
 
 const Dat = mongoose.model(
