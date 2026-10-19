@@ -116,8 +116,8 @@
 
             rows.forEach(row => {
                 const rowData = {
-                    BienSoXe: row.cells[0].textContent,
-                    LoaiHangXe: row.cells[1].textContent,
+                    BienSoXe: row.cells[0].textContent.trim(),
+                    LoaiHangXe: row.cells[1].textContent.trim(),
                 };
                 data.push(rowData);
             });
@@ -133,7 +133,8 @@
             }).then(response => {
                 spinnerOverlay.style.display = 'none';
                 if (response.ok) {
-                    alert('Data saved successfully!');
+                    alert('Đã lưu danh sách xe thành công!');
+                    window.location.href = '/allCar';
                 } else {
                     alert('Error saving data.');
                 }

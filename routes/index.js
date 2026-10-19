@@ -15,10 +15,26 @@ const dateDAT = require("../model/dateDAT");
 const studentDateDAT = require("../model/studentDateDAT");
 const excel = require("excel4node");
 
+function cleanCarPlate(plate) {
+  if (!plate) return "";
+  return String(plate).replace(/[-,.\s]/g, "").trim().toUpperCase();
+}
+
 function isAutoCar(loaiHang) {
   if (!loaiHang) return false;
-  const hang = String(loaiHang).trim().toUpperCase();
-  return hang === "B11" || hang === "B1";
+  const hang = String(loaiHang).replace(/[\r\n\s]+/g, "").trim().toUpperCase();
+  return hang === "B11" || hang === "B1" || hang === "B.01" || hang.includes("B11") || hang.includes("TỰĐỘNG");
+}
+
+function findMatchingCar(cars, plate) {
+  const target = cleanCarPlate(plate);
+  if (!target || !Array.isArray(cars)) return null;
+  const matches = cars.filter((car) => cleanCarPlate(car.BienSoXe) === target);
+  if (matches.length === 0) return null;
+  return (
+    matches.find((c) => c.LoaiHangXe && String(c.LoaiHangXe).trim() !== "") ||
+    matches[0]
+  );
 }
 
 /* GET home page. */
@@ -321,40 +337,128 @@ router.post("/uploadCar", upload.single("file"), (req, res) => {
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
   let data = xlsx.utils.sheet_to_json(sheet);
 
-  data = data.map((row) => {
-    const normalized = {};
-    for (const key of Object.keys(row)) {
-      const cleanKey = key.replace(/\n/g, " ").replace(/\s+/g, " ").trim();
-      normalized[cleanKey] = row[key];
-    }
+  data = data
+    .map((row) => {
+      const normalized = {};
+      for (const key of Object.keys(row)) {
+        const cleanKey = key.replace(/\n/g, " ").replace(/\s+/g, " ").trim();
+        normalized[cleanKey] = row[key];
+      }
 
-    const bienSoKey = Object.keys(normalized).find(k =>
-      /biển\s*số|bsx|biển\s*kiểm\s*soát/i.test(k)
-    );
-    const hangXeKey = Object.keys(normalized).find(k =>
-      /loại\s*hạng|hạng\s*xe|hạng|loại\s*xe/i.test(k)
-    );
+      const keys = Object.keys(normalized);
+      const bienSoKey = keys.find((k) =>
+        /biển\s*số|bsx|biển\s*kiểm\s*soát/i.test(k)
+      );
+      let hangXeKey = keys.find((k) =>
+        /loại\s*hạng|hạng\s*xe|hạng|loại\s*xe|ghi\s*chú/i.test(k)
+      );
 
-    if (bienSoKey) {
-      const val = String(normalized[bienSoKey] || "").replace(/[-,.]/g, "").trim();
-      normalized["Biển số"] = val;
-    }
-    if (hangXeKey) {
-      normalized["Loại hạng xe"] = normalized[hangXeKey];
-    }
+      // Fallback nếu file chỉ có 2 cột (cột 1 là biển số, cột 2 là hạng xe)
+      if (!hangXeKey && keys.length >= 2) {
+        hangXeKey = keys.find((k) => k !== bienSoKey && !/^stt$/i.test(k));
+      }
 
-    return normalized;
-  });
+      if (bienSoKey) {
+        normalized["Biển số"] = cleanCarPlate(normalized[bienSoKey]);
+      }
+      if (hangXeKey) {
+        normalized["Loại hạng xe"] = String(normalized[hangXeKey] || "")
+          .replace(/[\r\n\s]+/g, "")
+          .trim()
+          .toUpperCase();
+      }
+
+      return normalized;
+    })
+    .filter((row) => row["Biển số"]);
 
   // Hiển thị dữ liệu
   res.render("car", { data: data });
 });
 
+async function syncDatSessionAutoCars() {
+  const cars = await Car.find({}).lean();
+  const autoPlates = new Set(
+    cars
+      .filter((c) => isAutoCar(c.LoaiHangXe))
+      .map((c) => cleanCarPlate(c.BienSoXe))
+      .filter(Boolean)
+  );
+  if (autoPlates.size === 0) return;
+
+  const sessions = await Dat_session.find({}).lean();
+  const bulkOps = [];
+  for (const s of sessions) {
+    const plate = cleanCarPlate(s.XeTapLai);
+    if (autoPlates.has(plate)) {
+      const totalMin = (Number(s.TotalMorningTime) || 0) + (Number(s.TotalEveningTime) || 0);
+      const totalDist =
+        parseFloat(s.QuangDuong) ||
+        (Number(s.TotalMorningDistance) || 0) + (Number(s.TotalEveningDistance) || 0);
+      if (s.ThoiGianXeTuDong !== totalMin || s.QuangDuongXeTuDong !== totalDist) {
+        bulkOps.push({
+          updateOne: {
+            filter: { _id: s._id },
+            update: {
+              $set: {
+                ThoiGianXeTuDong: totalMin,
+                QuangDuongXeTuDong: totalDist,
+              },
+            },
+          },
+        });
+      }
+    }
+  }
+  if (bulkOps.length > 0) {
+    await Dat_session.bulkWrite(bulkOps);
+  }
+}
+
 router.post("/save-car", async (req, res) => {
   const carsData = req.body;
 
   try {
-    await Car.insertMany(carsData);
+    if (!Array.isArray(carsData) || carsData.length === 0) {
+      return res.status(400).send("No car data provided");
+    }
+
+    // Chuẩn hóa và khử trùng lặp theo biển số (ưu tiên bản ghi có Loại hạng xe)
+    const carMap = new Map();
+    for (const item of carsData) {
+      const cleanBienSo = cleanCarPlate(item.BienSoXe);
+      const cleanHang = String(item.LoaiHangXe || "")
+        .replace(/[\r\n\s]+/g, "")
+        .trim()
+        .toUpperCase();
+      if (!cleanBienSo) continue;
+
+      const existing = carMap.get(cleanBienSo);
+      if (!existing || (!existing.LoaiHangXe && cleanHang)) {
+        carMap.set(cleanBienSo, {
+          BienSoXe: cleanBienSo,
+          LoaiHangXe: cleanHang,
+        });
+      }
+    }
+
+    const uniqueCars = Array.from(carMap.values());
+    const plates = uniqueCars.map((c) => c.BienSoXe);
+
+    // Xóa các bản ghi cũ trùng biển số hoặc các bản ghi cũ bị rỗng Loại hạng xe
+    await Car.deleteMany({
+      $or: [
+        { BienSoXe: { $in: plates } },
+        { LoaiHangXe: { $in: ["", null] } },
+      ],
+    });
+
+    if (uniqueCars.length > 0) {
+      await Car.insertMany(uniqueCars);
+    }
+
+    await syncDatSessionAutoCars();
+
     res.status(200).send("Data saved successfully!");
   } catch (error) {
     res.status(500).send("Error saving data: " + error.message);
@@ -364,8 +468,10 @@ router.post("/save-car", async (req, res) => {
 router.post("/submitCar", async (req, res) => {
   try {
     const { id, BienSoXe, LoaiHangXe } = req.body;
-    const cleanBienSo = BienSoXe ? String(BienSoXe).replace(/[-,.]/g, "").trim() : "";
-    const cleanHang = LoaiHangXe ? String(LoaiHangXe).trim() : "";
+    const cleanBienSo = cleanCarPlate(BienSoXe);
+    const cleanHang = LoaiHangXe
+      ? String(LoaiHangXe).replace(/[\r\n\s]+/g, "").trim().toUpperCase()
+      : "";
 
     if (!cleanBienSo || !cleanHang) {
       return res.status(400).send("Biển số xe và Loại hạng xe không được để trống!");
@@ -374,13 +480,12 @@ router.post("/submitCar", async (req, res) => {
     if (id && id !== "") {
       await Car.findByIdAndUpdate(id, { BienSoXe: cleanBienSo, LoaiHangXe: cleanHang });
     } else {
-      const existing = await Car.findOne({ BienSoXe: cleanBienSo });
-      if (existing) {
-        await Car.findByIdAndUpdate(existing._id, { LoaiHangXe: cleanHang });
-      } else {
-        await Car.create({ BienSoXe: cleanBienSo, LoaiHangXe: cleanHang });
-      }
+      await Car.deleteMany({ BienSoXe: cleanBienSo });
+      await Car.create({ BienSoXe: cleanBienSo, LoaiHangXe: cleanHang });
     }
+
+    await syncDatSessionAutoCars();
+
     res.redirect("/allCar");
   } catch (error) {
     console.error("Error submitting car:", error);
@@ -398,6 +503,16 @@ router.post("/deleteCar", async (req, res) => {
   } catch (error) {
     console.error("Error deleting car:", error);
     res.status(500).send("Error deleting car: " + error.message);
+  }
+});
+
+router.post("/deleteAllCars", async (req, res) => {
+  try {
+    await Car.deleteMany({});
+    res.redirect("/allCar");
+  } catch (error) {
+    console.error("Error deleting all cars:", error);
+    res.status(500).send("Error deleting all cars: " + error.message);
   }
 });
 
@@ -481,12 +596,7 @@ router.get("/save-dat-session", async (req, res) => {
       quangDuongSang = tongQuangDuong - quangDuongToi;
     }
 
-    const matchingCar = cars.find(
-      (car) =>
-        car.BienSoXe &&
-        item.XeTapLai &&
-        String(car.BienSoXe).trim() === String(item.XeTapLai).trim()
-    );
+    const matchingCar = findMatchingCar(cars, item.XeTapLai);
 
     // Tính thời gian & quãng đường xe số tự động (B11):
     // - Ưu tiên theo danh sách xe B11: Nếu xe thuộc danh sách B11 đã nhập thì tính toàn bộ thời gian & quãng đường của phiên là B11.
@@ -891,7 +1001,7 @@ router.get("/save-dat-session", async (req, res) => {
     for (const vehicle in dateVehicleGroups[date]) {
       const studentCount = dateVehicleGroups[date][vehicle].size;
       if (studentCount > 1) {
-        const matchingCar = cars.find((car) => car.BienSoXe === vehicle);
+        const matchingCar = findMatchingCar(cars, vehicle);
         if (matchingCar && isAutoCar(matchingCar.LoaiHangXe)) {
           const violationReason = `Ngày ${date} xe tự động ${vehicle} có ${studentCount} học viên`;
           sessions.forEach((session) => {
@@ -956,7 +1066,7 @@ router.get("/save-dat-session", async (req, res) => {
 
       // Chỉ kiểm tra giới hạn cho xe B11 (35 học viên)
       if (sampleSession) {
-        const matchingCar = cars.find((car) => car.BienSoXe === vehicle);
+        const matchingCar = findMatchingCar(cars, vehicle);
         if (
           matchingCar &&
           isAutoCar(matchingCar.LoaiHangXe) &&
@@ -1212,6 +1322,23 @@ router.get("/computeData", async (req, res) => {
       TenDanhSachDAT: tenDanhSachFilter,
     }).lean();
 
+    const cars = await Car.find({}).lean();
+
+    const getSessionAutoMetrics = (s) => {
+      let autoTime = Number(s.ThoiGianXeTuDong) || 0;
+      let autoDist = Number(s.QuangDuongXeTuDong) || 0;
+      if (autoTime === 0 && autoDist === 0 && s.XeTapLai) {
+        const matchedCar = findMatchingCar(cars, s.XeTapLai);
+        if (matchedCar && isAutoCar(matchedCar.LoaiHangXe)) {
+          autoTime = (Number(s.TotalMorningTime) || 0) + (Number(s.TotalEveningTime) || 0);
+          autoDist =
+            parseFloat(s.QuangDuong) ||
+            (Number(s.TotalMorningDistance) || 0) + (Number(s.TotalEveningDistance) || 0);
+        }
+      }
+      return { autoTime, autoDist };
+    };
+
     const studentMap = new Map();
     const missingStudents = [];
 
@@ -1238,12 +1365,13 @@ router.get("/computeData", async (req, res) => {
       }
 
       const studentData = studentMap.get(studentId);
+      const { autoTime, autoDist } = getSessionAutoMetrics(col);
 
       studentData.totalMorningTime += col.TotalMorningTime;
       studentData.totalEveningTime += col.TotalEveningTime;
 
-      studentData.TongThoiGianB11 += col.ThoiGianXeTuDong;
-      studentData.TongQuangDuongB11 += col.QuangDuongXeTuDong;
+      studentData.TongThoiGianB11 += autoTime;
+      studentData.TongQuangDuongB11 += autoDist;
 
       studentData.totalMorningDistance += col.TotalMorningDistance;
       studentData.totalEveningDistance += col.TotalEveningDistance;
@@ -1269,10 +1397,11 @@ router.get("/computeData", async (req, res) => {
       let tongQuangDuongB11_all = 0;
       let tongThoiGianB11_all = 0;
       allSessions.forEach((session) => {
+        const { autoTime, autoDist } = getSessionAutoMetrics(session);
         totalDuration += session.TotalMorningTime + session.TotalEveningTime;
         totalDistance += session.TotalMorningDistance + session.TotalEveningDistance;
-        tongQuangDuongB11_all += session.QuangDuongXeTuDong || 0;
-        tongThoiGianB11_all += session.ThoiGianXeTuDong || 0;
+        tongQuangDuongB11_all += autoDist;
+        tongThoiGianB11_all += autoTime;
       });
 
       const student = await Student.findOne({ MaHocVien: studentId });
@@ -1399,13 +1528,14 @@ router.get("/computeData", async (req, res) => {
       let xeTapLaiList = Array.from(data.XeTapLai);
 
       for (let bienSoXe of xeTapLaiList) {
-        const car = await Car.findOne({ BienSoXe: bienSoXe }).lean();
+        const car = findMatchingCar(cars, bienSoXe);
         if (car) {
-          if (isAutoCar(car.LoaiHangXe)) {
+          const hangXe = String(car.LoaiHangXe || "").replace(/[\r\n\s]+/g, "").trim().toUpperCase();
+          if (isAutoCar(hangXe)) {
             data.B1.add(bienSoXe);
-          } else if (car.LoaiHangXe === "B2") {
+          } else if (hangXe === "B2" || hangXe === "B") {
             data.B2.add(bienSoXe);
-          } else if (car.LoaiHangXe === "C") {
+          } else if (hangXe.startsWith("C") || hangXe.startsWith("D")) {
             data.C.add(bienSoXe);
           }
         }
