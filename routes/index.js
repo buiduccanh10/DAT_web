@@ -1099,7 +1099,16 @@ router.get("/save-dat-session", async (req, res) => {
         { $set: { TrangThai: update.TrangThai, LyDoLoai: update.LyDoLoai } }
       );
     }
-    const dat_ss = await Dat_session.find({ TenDanhSachDAT: query }).sort({ KhoaHoc: 1, MaHocVien: 1, STT: 1 }).lean();
+    const dat_ss = await Dat_session.find({ TenDanhSachDAT: query }).lean();
+    dat_ss.sort((a, b) => {
+      if (a.KhoaHoc !== b.KhoaHoc) return String(a.KhoaHoc || "").localeCompare(String(b.KhoaHoc || ""));
+      if (a.MaHocVien !== b.MaHocVien) return String(a.MaHocVien || "").localeCompare(String(b.MaHocVien || ""));
+      const diff = (parseInt(a.STT, 10) || 0) - (parseInt(b.STT, 10) || 0);
+      if (diff !== 0) return diff;
+      const timeA = moment(a.NgayDaoTao, ["DD/MM/YYYY HH:mm:ss", "DD/MM/YY HH:mm", "YYYY-MM-DD HH:mm:ss"]).valueOf();
+      const timeB = moment(b.NgayDaoTao, ["DD/MM/YYYY HH:mm:ss", "DD/MM/YY HH:mm", "YYYY-MM-DD HH:mm:ss"]).valueOf();
+      return (timeA || 0) - (timeB || 0);
+    });
     const distinctTenDanhSach = await DAT.distinct("TenDanhSachDAT").lean();
 
     // Gắn thêm ảnh vào `dat_ss` đã được chuyển sang cơ chế Lazy Load qua API `/student-image-by-mahv`
@@ -1925,6 +1934,18 @@ router.get("/search/results", async (req, res) => {
         sessions = await Dat_session.find({
           MaHocVien: { $in: studentIds },
         }).lean();
+
+        // Sắp xếp các phiên học theo STT từ nhỏ đến lớn (1 -> N)
+        sessions.sort((a, b) => {
+          if (a.MaHocVien !== b.MaHocVien) {
+            return String(a.MaHocVien).localeCompare(String(b.MaHocVien));
+          }
+          const diff = (parseInt(a.STT, 10) || 0) - (parseInt(b.STT, 10) || 0);
+          if (diff !== 0) return diff;
+          const timeA = moment(a.NgayDaoTao, ["DD/MM/YYYY HH:mm:ss", "DD/MM/YY HH:mm", "YYYY-MM-DD HH:mm:ss"]).valueOf();
+          const timeB = moment(b.NgayDaoTao, ["DD/MM/YYYY HH:mm:ss", "DD/MM/YY HH:mm", "YYYY-MM-DD HH:mm:ss"]).valueOf();
+          return (timeA || 0) - (timeB || 0);
+        });
       }
     }
 
@@ -1945,7 +1966,16 @@ router.get("/studentDetails/:id", async (req, res) => {
 
   if (results.length > 0) {
     const studentIds = results.map((result) => result.MaHocVien);
-    sessions = await Dat_session.find({ MaHocVien: { $in: studentIds } });
+    sessions = await Dat_session.find({ MaHocVien: { $in: studentIds } }).lean();
+
+    // Sắp xếp các phiên học theo STT từ nhỏ đến lớn (1 -> N)
+    sessions.sort((a, b) => {
+      const diff = (parseInt(a.STT, 10) || 0) - (parseInt(b.STT, 10) || 0);
+      if (diff !== 0) return diff;
+      const timeA = moment(a.NgayDaoTao, ["DD/MM/YYYY HH:mm:ss", "DD/MM/YY HH:mm", "YYYY-MM-DD HH:mm:ss"]).valueOf();
+      const timeB = moment(b.NgayDaoTao, ["DD/MM/YYYY HH:mm:ss", "DD/MM/YY HH:mm", "YYYY-MM-DD HH:mm:ss"]).valueOf();
+      return (timeA || 0) - (timeB || 0);
+    });
   }
 
   res.render("search", { results, sessions });
