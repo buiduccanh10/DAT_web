@@ -1425,28 +1425,27 @@ router.get("/computeData", async (req, res) => {
       }
       let studentStatus = false;
 
+      // Xe số tự động với hạng B2 và C:
+      // - Giữ nguyên thời gian & quãng đường xe số tự động thực tế (data.TongThoiGianB11, data.TongQuangDuongB11)
+      // - Chỉ trừ phần vượt quá giới hạn trần ra khỏi tổng thời gian & tổng quãng đường dùng cho xét duyệt và báo cáo
       if (category === "B2") {
         const maxAutoDistB = 80;
         const maxAutoTimeB = 95; // 1h35p
         
         if (data.TongQuangDuongB11 > maxAutoDistB) {
           const excessDist = data.TongQuangDuongB11 - maxAutoDistB;
-          data.TongQuangDuongB11 = maxAutoDistB;
           data.totalDistance -= excessDist;
         }
         if (data.TongThoiGianB11 > maxAutoTimeB) {
           const excessTime = data.TongThoiGianB11 - maxAutoTimeB;
-          data.TongThoiGianB11 = maxAutoTimeB;
           data.totalDuration -= excessTime;
         }
 
         if (tongQuangDuongB11_all > maxAutoDistB) {
           totalDistance -= (tongQuangDuongB11_all - maxAutoDistB);
-          tongQuangDuongB11_all = maxAutoDistB;
         }
         if (tongThoiGianB11_all > maxAutoTimeB) {
           totalDuration -= (tongThoiGianB11_all - maxAutoTimeB);
-          tongThoiGianB11_all = maxAutoTimeB;
         }
       } else if (category === "C") {
         const maxAutoDistC = 50;
@@ -1454,22 +1453,18 @@ router.get("/computeData", async (req, res) => {
 
         if (data.TongQuangDuongB11 > maxAutoDistC) {
           const excessDist = data.TongQuangDuongB11 - maxAutoDistC;
-          data.TongQuangDuongB11 = maxAutoDistC;
           data.totalDistance -= excessDist;
         }
         if (data.TongThoiGianB11 > maxAutoTimeC) {
           const excessTime = data.TongThoiGianB11 - maxAutoTimeC;
-          data.TongThoiGianB11 = maxAutoTimeC;
           data.totalDuration -= excessTime;
         }
 
         if (tongQuangDuongB11_all > maxAutoDistC) {
           totalDistance -= (tongQuangDuongB11_all - maxAutoDistC);
-          tongQuangDuongB11_all = maxAutoDistC;
         }
         if (tongThoiGianB11_all > maxAutoTimeC) {
           totalDuration -= (tongThoiGianB11_all - maxAutoTimeC);
-          tongThoiGianB11_all = maxAutoTimeC;
         }
       }
 
