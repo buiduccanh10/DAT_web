@@ -1402,16 +1402,14 @@ router.get("/computeData", async (req, res) => {
       }).lean();
       let totalDuration = 0;
       let totalDistance = 0;
-
-      let tongQuangDuongB11_all = 0;
-      let tongThoiGianB11_all = 0;
       allSessions.forEach((session) => {
-        const { autoTime, autoDist } = getSessionAutoMetrics(session);
         totalDuration += session.TotalMorningTime + session.TotalEveningTime;
         totalDistance += session.TotalMorningDistance + session.TotalEveningDistance;
-        tongQuangDuongB11_all += autoDist;
-        tongThoiGianB11_all += autoTime;
       });
+
+      // Báo cáo hiển thị tổng thực tế; chỉ dùng bản sao đã trừ phần vượt trần để xét duyệt.
+      let countedTotalDuration = data.totalDuration;
+      let countedTotalDistance = data.totalDistance;
 
       const student = await Student.findOne({ MaHocVien: studentId });
 
@@ -1433,28 +1431,26 @@ router.get("/computeData", async (req, res) => {
         category = mapCategory(student.LoaiKhoaHoc, student.KhoaHoc);
       }
       let studentStatus = false;
+      const limitReasons = [];
 
-      // Xe số tự động với hạng B2 và C:
-      // - Giữ nguyên thời gian & quãng đường xe số tự động thực tế (data.TongThoiGianB11, data.TongQuangDuongB11)
-      // - Chỉ trừ phần vượt quá giới hạn trần ra khỏi tổng thời gian & tổng quãng đường dùng cho xét duyệt và báo cáo
+      // Xe số tự động với hạng B2 và C: chỉ trừ phần vượt trần khỏi số liệu xét duyệt.
       if (category === "B2") {
         const maxAutoDistB = 80;
         const maxAutoTimeB = 95; // 1h35p
         
         if (data.TongQuangDuongB11 > maxAutoDistB) {
           const excessDist = data.TongQuangDuongB11 - maxAutoDistB;
-          data.totalDistance -= excessDist;
+          countedTotalDistance -= excessDist;
+          limitReasons.push(
+            `Quãng đường B11 vượt tối đa ${maxAutoDistB}km; phần vượt không được tính`
+          );
         }
         if (data.TongThoiGianB11 > maxAutoTimeB) {
           const excessTime = data.TongThoiGianB11 - maxAutoTimeB;
-          data.totalDuration -= excessTime;
-        }
-
-        if (tongQuangDuongB11_all > maxAutoDistB) {
-          totalDistance -= (tongQuangDuongB11_all - maxAutoDistB);
-        }
-        if (tongThoiGianB11_all > maxAutoTimeB) {
-          totalDuration -= (tongThoiGianB11_all - maxAutoTimeB);
+          countedTotalDuration -= excessTime;
+          limitReasons.push(
+            `Thời gian B11 vượt tối đa ${formatTime(maxAutoTimeB)}; phần vượt không được tính`
+          );
         }
       } else if (category === "C") {
         const maxAutoDistC = 50;
@@ -1462,24 +1458,23 @@ router.get("/computeData", async (req, res) => {
 
         if (data.TongQuangDuongB11 > maxAutoDistC) {
           const excessDist = data.TongQuangDuongB11 - maxAutoDistC;
-          data.totalDistance -= excessDist;
+          countedTotalDistance -= excessDist;
+          limitReasons.push(
+            `Quãng đường B11 vượt tối đa ${maxAutoDistC}km; phần vượt không được tính`
+          );
         }
         if (data.TongThoiGianB11 > maxAutoTimeC) {
           const excessTime = data.TongThoiGianB11 - maxAutoTimeC;
-          data.totalDuration -= excessTime;
-        }
-
-        if (tongQuangDuongB11_all > maxAutoDistC) {
-          totalDistance -= (tongQuangDuongB11_all - maxAutoDistC);
-        }
-        if (tongThoiGianB11_all > maxAutoTimeC) {
-          totalDuration -= (tongThoiGianB11_all - maxAutoTimeC);
+          countedTotalDuration -= excessTime;
+          limitReasons.push(
+            `Thời gian B11 vượt tối đa ${formatTime(maxAutoTimeC)}; phần vượt không được tính`
+          );
         }
       }
 
       if (category === "B1") {
-        if (data.totalDuration < 720) reasons.push("Thời gian chưa đạt 12 giờ");
-        if (data.totalDistance < 710)
+        if (countedTotalDuration < 720) reasons.push("Thời gian chưa đạt 12 giờ");
+        if (countedTotalDistance < 710)
           reasons.push("Quãng đường chưa đạt 710km");
         if (data.totalEveningTime < 150)
           reasons.push("Thời gian tối chưa đạt 2.5 giờ");
@@ -1491,9 +1486,9 @@ router.get("/computeData", async (req, res) => {
       } else if (category === "B2") {
         if (data.TongQuangDuongB11 < 60)
           reasons.push("Chưa đi đủ quãng đường B11 (tối thiểu 60km)");
-        if (data.totalDuration < 1200)
+        if (countedTotalDuration < 1200)
           reasons.push("Thời gian chưa đạt 20 giờ");
-        if (data.totalDistance < 810)
+        if (countedTotalDistance < 810)
           reasons.push("Quãng đường chưa đạt 810km");
         if (data.totalEveningTime < 150)
           reasons.push("Thời gian tối chưa đạt 2.5 giờ");
@@ -1505,9 +1500,9 @@ router.get("/computeData", async (req, res) => {
       } else if (category === "C") {
         if (data.TongQuangDuongB11 < 40)
           reasons.push("Chưa đi đủ quãng đường B11 (tối thiểu 40km)");
-        if (data.totalDuration < 1440)
+        if (countedTotalDuration < 1440)
           reasons.push("Thời gian chưa đạt 24 giờ");
-        if (data.totalDistance < 825)
+        if (countedTotalDistance < 825)
           reasons.push("Quãng đường chưa đạt 825km");
         if (data.totalEveningTime < 150)
           reasons.push("Thời gian tối chưa đạt 2.5 giờ");
@@ -1523,10 +1518,14 @@ router.get("/computeData", async (req, res) => {
         studentStatus = true;
       }
 
-      const avgSpeed = data.totalDuration > 0 ? data.totalDistance / (data.totalDuration / 60) : 0;
-      if (data.totalDuration > 0 && avgSpeed < 25) {
+      const avgSpeed = countedTotalDuration > 0 ? countedTotalDistance / (countedTotalDuration / 60) : 0;
+      if (countedTotalDuration > 0 && avgSpeed < 25) {
         reasons.push("Tốc độ trung bình dưới 25km/h");
         studentStatus = true;
+      }
+
+      if (studentStatus) {
+        reasons.push(...limitReasons);
       }
 
       let xeTapLaiList = Array.from(data.XeTapLai);
