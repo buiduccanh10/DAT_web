@@ -1372,21 +1372,49 @@ function computeStudentMetrics(studentId, studentSessions, student, cars, tenDan
     };
   }
 
-  // Tích lũy từ tất cả các phiên hợp lệ (TrangThai === false)
-  const validSessions = studentSessions.filter((s) => s.TrangThai === false);
-
-  let totalMorningTime = 0;
-  let totalEveningTime = 0;
-  let tongThoiGianB11 = 0;
-  let tongQuangDuongB11 = 0;
-  let totalMorningDistance = 0;
-  let totalEveningDistance = 0;
-  let totalDuration = 0;
-  let totalDistance = 0;
+  // 1. Tích lũy số liệu HIỂN THỊ từ TẤT CẢ các phiên (kể cả phiên bị bảo lưu)
+  let displayMorningTime = 0;
+  let displayEveningTime = 0;
+  let displayAutoTime = 0;
+  let displayAutoDist = 0;
+  let displayMorningDistance = 0;
+  let displayEveningDistance = 0;
+  let displayTotalDuration = 0;
+  let displayTotalDistance = 0;
   const xeTapLaiSet = new Set();
   const b1Set = new Set();
   const b2Set = new Set();
   const cSet = new Set();
+
+  studentSessions.forEach((col) => {
+    const { autoTime, autoDist } = getSessionAutoMetrics(col);
+    const mTime = Number(col.TotalMorningTime) || 0;
+    const eTime = Number(col.TotalEveningTime) || 0;
+    const mDist = Number(col.TotalMorningDistance) || 0;
+    const eDist = Number(col.TotalEveningDistance) || 0;
+
+    displayMorningTime += mTime;
+    displayEveningTime += eTime;
+    displayAutoTime += autoTime;
+    displayAutoDist += autoDist;
+    displayMorningDistance += mDist;
+    displayEveningDistance += eDist;
+    displayTotalDuration += mTime + eTime;
+    displayTotalDistance += mDist + eDist;
+    if (col.XeTapLai) xeTapLaiSet.add(col.XeTapLai);
+  });
+
+  // 2. Tích lũy số liệu XÉT DUYỆT ngầm CHỈ từ các phiên HỢP LỆ (TrangThai === false)
+  const validSessions = studentSessions.filter((s) => s.TrangThai === false);
+
+  let validMorningTime = 0;
+  let validEveningTime = 0;
+  let validAutoTime = 0;
+  let validAutoDist = 0;
+  let validMorningDistance = 0;
+  let validEveningDistance = 0;
+  let validTotalDuration = 0;
+  let validTotalDistance = 0;
 
   validSessions.forEach((col) => {
     const { autoTime, autoDist } = getSessionAutoMetrics(col);
@@ -1395,36 +1423,35 @@ function computeStudentMetrics(studentId, studentSessions, student, cars, tenDan
     const mDist = Number(col.TotalMorningDistance) || 0;
     const eDist = Number(col.TotalEveningDistance) || 0;
 
-    totalMorningTime += mTime;
-    totalEveningTime += eTime;
-    tongThoiGianB11 += autoTime;
-    tongQuangDuongB11 += autoDist;
-    totalMorningDistance += mDist;
-    totalEveningDistance += eDist;
-    totalDuration += mTime + eTime;
-    totalDistance += mDist + eDist;
-    if (col.XeTapLai) xeTapLaiSet.add(col.XeTapLai);
+    validMorningTime += mTime;
+    validEveningTime += eTime;
+    validAutoTime += autoTime;
+    validAutoDist += autoDist;
+    validMorningDistance += mDist;
+    validEveningDistance += eDist;
+    validTotalDuration += mTime + eTime;
+    validTotalDistance += mDist + eDist;
   });
 
-  // Báo cáo hiển thị tổng thực tế; chỉ dùng bản sao đã trừ phần vượt trần để xét duyệt.
-  let countedTotalDuration = totalDuration;
-  let countedTotalDistance = totalDistance;
+  // Số liệu dùng để xét duyệt (chỉ trừ trần B11 từ số liệu hợp lệ nếu có)
+  let countedValidDuration = validTotalDuration;
+  let countedValidDistance = validTotalDistance;
   const limitReasons = [];
 
-  // Xe số tự động với hạng B2 và C: chỉ trừ phần vượt trần khỏi số liệu xét duyệt.
+  // Xe số tự động với hạng B2 và C: chỉ trừ phần vượt trần khỏi số liệu xét duyệt hợp lệ.
   if (category === "B2") {
     const maxAutoDistB = 80;
     const maxAutoTimeB = 95; // 1h35p
-    if (tongQuangDuongB11 > maxAutoDistB) {
-      const excessDist = tongQuangDuongB11 - maxAutoDistB;
-      countedTotalDistance -= excessDist;
+    if (validAutoDist > maxAutoDistB) {
+      const excessDist = validAutoDist - maxAutoDistB;
+      countedValidDistance -= excessDist;
       limitReasons.push(
         `Quãng đường B11 vượt tối đa ${maxAutoDistB}km; phần vượt không được tính`
       );
     }
-    if (tongThoiGianB11 > maxAutoTimeB) {
-      const excessTime = tongThoiGianB11 - maxAutoTimeB;
-      countedTotalDuration -= excessTime;
+    if (validAutoTime > maxAutoTimeB) {
+      const excessTime = validAutoTime - maxAutoTimeB;
+      countedValidDuration -= excessTime;
       limitReasons.push(
         `Thời gian B11 vượt tối đa ${formatTime(maxAutoTimeB)}; phần vượt không được tính`
       );
@@ -1432,16 +1459,16 @@ function computeStudentMetrics(studentId, studentSessions, student, cars, tenDan
   } else if (category === "C") {
     const maxAutoDistC = 50;
     const maxAutoTimeC = 65; // 1h5p
-    if (tongQuangDuongB11 > maxAutoDistC) {
-      const excessDist = tongQuangDuongB11 - maxAutoDistC;
-      countedTotalDistance -= excessDist;
+    if (validAutoDist > maxAutoDistC) {
+      const excessDist = validAutoDist - maxAutoDistC;
+      countedValidDistance -= excessDist;
       limitReasons.push(
         `Quãng đường B11 vượt tối đa ${maxAutoDistC}km; phần vượt không được tính`
       );
     }
-    if (tongThoiGianB11 > maxAutoTimeC) {
-      const excessTime = tongThoiGianB11 - maxAutoTimeC;
-      countedTotalDuration -= excessTime;
+    if (validAutoTime > maxAutoTimeC) {
+      const excessTime = validAutoTime - maxAutoTimeC;
+      countedValidDuration -= excessTime;
       limitReasons.push(
         `Thời gian B11 vượt tối đa ${formatTime(maxAutoTimeC)}; phần vượt không được tính`
       );
@@ -1450,33 +1477,33 @@ function computeStudentMetrics(studentId, studentSessions, student, cars, tenDan
 
   const reasons = [];
   if (category === "B1") {
-    if (countedTotalDuration < 720) reasons.push("Thời gian chưa đạt 12 giờ");
-    if (countedTotalDistance < 710) reasons.push("Quãng đường chưa đạt 710km");
-    if (totalEveningTime < 150) reasons.push("Thời gian tối chưa đạt 2.5 giờ");
-    if (totalEveningTime > 300) reasons.push("Thời gian tối quá 5 giờ");
-    if (totalEveningDistance < 100) reasons.push("Quãng đường tối chưa đạt 100km");
+    if (countedValidDuration < 720) reasons.push("Thời gian chưa đạt 12 giờ");
+    if (countedValidDistance < 710) reasons.push("Quãng đường chưa đạt 710km");
+    if (validEveningTime < 150) reasons.push("Thời gian tối chưa đạt 2.5 giờ");
+    if (validEveningTime > 300) reasons.push("Thời gian tối quá 5 giờ");
+    if (validEveningDistance < 100) reasons.push("Quãng đường tối chưa đạt 100km");
   } else if (category === "B2") {
-    if (tongQuangDuongB11 < 60) reasons.push("Chưa đi đủ quãng đường B11 (tối thiểu 60km)");
-    if (countedTotalDuration < 1200) reasons.push("Thời gian chưa đạt 20 giờ");
-    if (countedTotalDistance < 810) reasons.push("Quãng đường chưa đạt 810km");
-    if (totalEveningTime < 150) reasons.push("Thời gian tối chưa đạt 2.5 giờ");
-    if (totalEveningTime > 300) reasons.push("Thời gian tối quá 5 giờ");
-    if (totalEveningDistance < 100) reasons.push("Quãng đường tối chưa đạt 100km");
+    if (validAutoDist < 60) reasons.push("Chưa đi đủ quãng đường B11 (tối thiểu 60km)");
+    if (countedValidDuration < 1200) reasons.push("Thời gian chưa đạt 20 giờ");
+    if (countedValidDistance < 810) reasons.push("Quãng đường chưa đạt 810km");
+    if (validEveningTime < 150) reasons.push("Thời gian tối chưa đạt 2.5 giờ");
+    if (validEveningTime > 300) reasons.push("Thời gian tối quá 5 giờ");
+    if (validEveningDistance < 100) reasons.push("Quãng đường tối chưa đạt 100km");
   } else if (category === "C") {
-    if (tongQuangDuongB11 < 40) reasons.push("Chưa đi đủ quãng đường B11 (tối thiểu 40km)");
-    if (countedTotalDuration < 1440) reasons.push("Thời gian chưa đạt 24 giờ");
-    if (countedTotalDistance < 825) reasons.push("Quãng đường chưa đạt 825km");
-    if (totalEveningTime < 150) reasons.push("Thời gian tối chưa đạt 2.5 giờ");
-    if (totalEveningTime > 300) reasons.push("Thời gian tối quá 5 giờ");
-    if (totalEveningDistance < 70) reasons.push("Quãng đường tối chưa đạt 70km");
+    if (validAutoDist < 40) reasons.push("Chưa đi đủ quãng đường B11 (tối thiểu 40km)");
+    if (countedValidDuration < 1440) reasons.push("Thời gian chưa đạt 24 giờ");
+    if (countedValidDistance < 825) reasons.push("Quãng đường chưa đạt 825km");
+    if (validEveningTime < 150) reasons.push("Thời gian tối chưa đạt 2.5 giờ");
+    if (validEveningTime > 300) reasons.push("Thời gian tối quá 5 giờ");
+    if (validEveningDistance < 70) reasons.push("Quãng đường tối chưa đạt 70km");
   }
 
-  if (totalMorningDistance < 5 && totalMorningTime < 30) {
+  if (validMorningDistance < 5 && validMorningTime < 30) {
     reasons.push("Chưa đủ điều kiện đi tối");
   }
 
-  const avgSpeed = countedTotalDuration > 0 ? countedTotalDistance / (countedTotalDuration / 60) : 0;
-  if (countedTotalDuration > 0 && avgSpeed < 25) {
+  const avgSpeed = countedValidDuration > 0 ? countedValidDistance / (countedValidDuration / 60) : 0;
+  if (countedValidDuration > 0 && avgSpeed < 25) {
     reasons.push("Tốc độ trung bình dưới 25km/h");
   }
 
@@ -1509,14 +1536,14 @@ function computeStudentMetrics(studentId, studentSessions, student, cars, tenDan
     NgaySinh: student ? student.NgaySinh : (firstSession.NgaySinh || ""),
     GioiTinh: student ? student.GioiTinh : (firstSession.GioiTinh || ""),
     SoCMT: student ? student.SoCMT : (firstSession.SoCMT || ""),
-    TongThoiGianXeSoTuDong: formatTime(tongThoiGianB11),
-    TongQuangDuongXeSoTuDong: tongQuangDuongB11.toFixed(2),
-    TotalMorningTime: formatTime(totalMorningTime),
-    TotalEveningTime: formatTime(totalEveningTime),
-    TotalMorningDistance: totalMorningDistance.toFixed(2),
-    TotalEveningDistance: totalEveningDistance.toFixed(2),
-    TotalDuration: formatTime(totalDuration),
-    TotalDistance: totalDistance.toFixed(2),
+    TongThoiGianXeSoTuDong: formatTime(displayAutoTime),
+    TongQuangDuongXeSoTuDong: displayAutoDist.toFixed(2),
+    TotalMorningTime: formatTime(displayMorningTime),
+    TotalEveningTime: formatTime(displayEveningTime),
+    TotalMorningDistance: displayMorningDistance.toFixed(2),
+    TotalEveningDistance: displayEveningDistance.toFixed(2),
+    TotalDuration: formatTime(displayTotalDuration),
+    TotalDistance: displayTotalDistance.toFixed(2),
     Category: category,
     TrangThai: studentStatus,
     LyDo: reasons.join(", "),
