@@ -1318,35 +1318,22 @@ router.post("/updateSession", async (req, res) => {
   }
 });
 
-router.get("/computeData", async (req, res) => {
-  const query = req.query.tenDanhSach;
-  try {
-    let tenDanhSachFilter = query;
-    if (query && query.includes(',')) {
-      tenDanhSachFilter = { $in: query.split(',').map(s => s.trim()) };
-    }
-
-    const dat_ss = await Dat_session.find({
-      TrangThai: false,
-      TenDanhSachDAT: tenDanhSachFilter,
-    }).lean();
-
-    const cars = await Car.find({}).lean();
-
-    const getSessionAutoMetrics = (s) => {
-      let autoTime = Number(s.ThoiGianXeTuDong) || 0;
-      let autoDist = Number(s.QuangDuongXeTuDong) || 0;
-      if (autoTime === 0 && autoDist === 0 && s.XeTapLai) {
-        const matchedCar = findMatchingCar(cars, s.XeTapLai);
-        if (matchedCar && isAutoCar(matchedCar.LoaiHangXe)) {
-          autoTime = (Number(s.TotalMorningTime) || 0) + (Number(s.TotalEveningTime) || 0);
-          autoDist =
-            parseFloat(s.QuangDuong) ||
-            (Number(s.TotalMorningDistance) || 0) + (Number(s.TotalEveningDistance) || 0);
-        }
+// Hàm tính toán tổng hợp toàn bộ các phiên của một học viên
+function computeStudentMetrics(studentId, studentSessions, student, cars, tenDanhSachQuery) {
+  const getSessionAutoMetrics = (s) => {
+    let autoTime = Number(s.ThoiGianXeTuDong) || 0;
+    let autoDist = Number(s.QuangDuongXeTuDong) || 0;
+    if (autoTime === 0 && autoDist === 0 && s.XeTapLai) {
+      const matchedCar = findMatchingCar(cars, s.XeTapLai);
+      if (matchedCar && isAutoCar(matchedCar.LoaiHangXe)) {
+        autoTime = (Number(s.TotalMorningTime) || 0) + (Number(s.TotalEveningTime) || 0);
+        autoDist =
+          parseFloat(s.QuangDuong) ||
+          (Number(s.TotalMorningDistance) || 0) + (Number(s.TotalEveningDistance) || 0);
       }
-      return { autoTime, autoDist };
-    };
+    }
+    return { autoTime, autoDist };
+  };
 
     const studentMap = new Map();
     const missingStudents = [];
@@ -1513,10 +1500,9 @@ router.get("/computeData", async (req, res) => {
         studentStatus = reasons.length > 0;
       }
 
-      if (data.totalMorningDistance < 5 && data.totalMorningTime < 30) {
-        reasons.push("Chưa đủ điều kiện đi tối");
-        studentStatus = true;
-      }
+  if (totalMorningDistance < 5 && totalMorningTime < 30) {
+    reasons.push("Chưa đủ điều kiện đi tối");
+  }
 
       const avgSpeed = countedTotalDuration > 0 ? countedTotalDistance / (countedTotalDuration / 60) : 0;
       if (countedTotalDuration > 0 && avgSpeed < 25) {
@@ -1528,135 +1514,172 @@ router.get("/computeData", async (req, res) => {
         reasons.push(...limitReasons);
       }
 
-      let xeTapLaiList = Array.from(data.XeTapLai);
-
-      for (let bienSoXe of xeTapLaiList) {
-        const car = findMatchingCar(cars, bienSoXe);
-        if (car) {
-          const hangXe = String(car.LoaiHangXe || "").replace(/[\r\n\s]+/g, "").trim().toUpperCase();
-          if (isAutoCar(hangXe)) {
-            data.B1.add(bienSoXe);
-          } else if (hangXe === "B2" || hangXe === "B") {
-            data.B2.add(bienSoXe);
-          } else if (hangXe.startsWith("C") || hangXe.startsWith("D")) {
-            data.C.add(bienSoXe);
-          }
-        }
+  for (let bienSoXe of xeTapLaiSet) {
+    const car = findMatchingCar(cars, bienSoXe);
+    if (car) {
+      const hangXe = String(car.LoaiHangXe || "").replace(/[\r\n\s]+/g, "").trim().toUpperCase();
+      if (isAutoCar(hangXe)) {
+        b1Set.add(bienSoXe);
+      } else if (hangXe === "B2" || hangXe === "B") {
+        b2Set.add(bienSoXe);
+      } else if (hangXe.startsWith("C") || hangXe.startsWith("D")) {
+        cSet.add(bienSoXe);
       }
+    }
+  }
 
-      updatedStudents.push({
-        MaHocVien: studentId,
-        KhoaHoc: student ? student.KhoaHoc : (firstSession.KhoaHoc || ""),
-        MaKhoaHoc: student ? student.MaKhoaHoc : (firstSession.MaKhoaHoc || ""),
-        HoTen: student ? student.HoTen : (firstSession.HoTen || ""),
-        NgaySinh: student ? student.NgaySinh : "",
-        GioiTinh: student ? student.GioiTinh : "",
-        SoCMT: student ? student.SoCMT : "",
-        TongThoiGianXeSoTuDong: formatTime(data.TongThoiGianB11),
-        TongQuangDuongXeSoTuDong: data.TongQuangDuongB11.toFixed(2),
-        TotalMorningTime: formatTime(data.totalMorningTime),
-        TotalEveningTime: formatTime(data.totalEveningTime),
-        TotalMorningDistance: data.totalMorningDistance.toFixed(2),
-        TotalEveningDistance: data.totalEveningDistance.toFixed(2),
-        TotalDuration: formatTime(totalDuration),
-        TotalDistance: totalDistance.toFixed(2),
-        Category: category,
-        TrangThai: studentStatus,
-        LyDo: reasons.join(", "),
-        B1: Array.from(data.B1).join(", "),
-        B2: Array.from(data.B2).join(", "),
-        C: Array.from(data.C).join(", "),
-        TenDanhSachDAT: query,
+  const firstSession = studentSessions[0] || {};
+  const studentStatus = reasons.length > 0;
+
+  return {
+    MaHocVien: studentId,
+    KhoaHoc: student ? student.KhoaHoc : (firstSession.KhoaHoc || ""),
+    MaKhoaHoc: student ? student.MaKhoaHoc : (firstSession.MaKhoaHoc || ""),
+    HoTen: student ? student.HoTen : (firstSession.HoTen || ""),
+    NgaySinh: student ? student.NgaySinh : (firstSession.NgaySinh || ""),
+    GioiTinh: student ? student.GioiTinh : (firstSession.GioiTinh || ""),
+    SoCMT: student ? student.SoCMT : (firstSession.SoCMT || ""),
+    TongThoiGianXeSoTuDong: formatTime(tongThoiGianB11),
+    TongQuangDuongXeSoTuDong: tongQuangDuongB11.toFixed(2),
+    TotalMorningTime: formatTime(totalMorningTime),
+    TotalEveningTime: formatTime(totalEveningTime),
+    TotalMorningDistance: totalMorningDistance.toFixed(2),
+    TotalEveningDistance: totalEveningDistance.toFixed(2),
+    TotalDuration: formatTime(adjustedDuration),
+    TotalDistance: adjustedDistance.toFixed(2),
+    Category: category,
+    TrangThai: studentStatus,
+    LyDo: reasons.join(", "),
+    B1: Array.from(b1Set).join(", "),
+    B2: Array.from(b2Set).join(", "),
+    C: Array.from(cSet).join(", "),
+    TenDanhSachDAT: tenDanhSachQuery || firstSession.TenDanhSachDAT || "",
+  };
+}
+
+router.get("/computeData", async (req, res) => {
+  const query = req.query.tenDanhSach;
+  try {
+    const cars = await Car.find({}).lean();
+
+    let tenDanhSachFilter = query;
+    if (query && query.includes(',')) {
+      tenDanhSachFilter = { $in: query.split(',').map(s => s.trim()) };
+    }
+
+    let studentIds = [];
+    if (!query || query === "all") {
+      // Tính cho toàn bộ học viên có phiên trong hệ thống
+      studentIds = await Dat_session.distinct("MaHocVien");
+    } else {
+      // Lấy danh sách các học viên có phiên trong danh sách được chọn
+      studentIds = await Dat_session.distinct("MaHocVien", {
+        TenDanhSachDAT: tenDanhSachFilter,
       });
     }
 
-    const filter = {
-      MaHocVien: { $in: updatedStudents.map((student) => student.MaHocVien) },
-      TenDanhSachDAT: tenDanhSachFilter,
-    };
+    studentIds = studentIds.filter(Boolean);
+    const updatedStudents = [];
+    const missingStudents = [];
 
-    await Total.deleteMany(filter);
+    for (const studentId of studentIds) {
+      // Lấy TOÀN BỘ các phiên của học viên này trong hệ thống để cộng dồn chính xác
+      const allStudentSessions = await Dat_session.find({ MaHocVien: studentId }).lean();
+      const student = await Student.findOne({ MaHocVien: studentId }).lean();
 
-    await Total.create(updatedStudents);
+      if (!student) {
+        missingStudents.push(studentId);
+      }
 
-    const existingTotalStudents = await Total.find({ TenDanhSachDAT: tenDanhSachFilter }).lean();
-    const existingTotalIdSet = new Set(
-      existingTotalStudents.map((student) => student.MaHocVien)
-    );
-    const students = await Student.find().lean();
+      const totalDoc = computeStudentMetrics(
+        studentId,
+        allStudentSessions,
+        student,
+        cars,
+        query && query !== "all" ? query : ""
+      );
 
-    // Handle students in Student model but not in dat_ss for this query
-    for (const student of students) {
-      const category = mapCategory(student.LoaiKhoaHoc, student.KhoaHoc);
+      updatedStudents.push(totalDoc);
+    }
 
-      if (!existingTotalIdSet.has(student.MaHocVien)) {
-        const newTotal = new Total({
-          MaHocVien: student.MaHocVien,
-          HoTen: student.HoTen,
-          SoCMT: student.SoCMT,
-          GioiTinh: student.GioiTinh,
-          NgaySinh: student.NgaySinh,
-          KhoaHoc: student.KhoaHoc,
-          MaKhoaHoc: student.MaKhoaHoc,
-          TongThoiGianXeSoTuDong: 0,
-          TongQuangDuongXeSoTuDong: "0",
-          TotalMorningTime: "0h00",
-          TotalEveningTime: "0h00",
-          TotalMorningDistance: "0.00",
-          TotalEveningDistance: "0.00",
-          TotalDuration: "0h00",
-          TotalDistance: "0.00",
-          Category: category,
-          TrangThai: true,
-          LyDo: "Chưa chạy chạy phiên",
-          B1: "",
-          B2: "",
-          C: "",
-          TenDanhSachDAT: query,
-        });
-        await newTotal.save();
+    // Xóa các bản ghi cũ của các học viên này trong Total (xóa theo MaHocVien để triệt để loại bỏ nhân bản)
+    if (updatedStudents.length > 0) {
+      await Total.deleteMany({
+        MaHocVien: { $in: updatedStudents.map((s) => s.MaHocVien) },
+      });
+      await Total.create(updatedStudents);
+    }
+
+    // Bổ sung học viên từ Student chưa từng chạy phiên nào (khi tính tất cả)
+    if (!query || query === "all") {
+      const existingTotalStudents = await Total.find({}).lean();
+      const existingTotalIdSet = new Set(
+        existingTotalStudents.map((student) => student.MaHocVien)
+      );
+      const students = await Student.find().lean();
+
+      for (const student of students) {
+        if (!existingTotalIdSet.has(student.MaHocVien)) {
+          const category = mapCategory(student.LoaiKhoaHoc, student.KhoaHoc);
+          const newTotal = new Total({
+            MaHocVien: student.MaHocVien,
+            HoTen: student.HoTen,
+            SoCMT: student.SoCMT,
+            GioiTinh: student.GioiTinh,
+            NgaySinh: student.NgaySinh,
+            KhoaHoc: student.KhoaHoc,
+            MaKhoaHoc: student.MaKhoaHoc,
+            TongThoiGianXeSoTuDong: "0h00",
+            TongQuangDuongXeSoTuDong: "0.00",
+            TotalMorningTime: "0h00",
+            TotalEveningTime: "0h00",
+            TotalMorningDistance: "0.00",
+            TotalEveningDistance: "0.00",
+            TotalDuration: "0h00",
+            TotalDistance: "0.00",
+            Category: category,
+            TrangThai: true,
+            LyDo: "Chưa chạy phiên",
+            B1: "",
+            B2: "",
+            C: "",
+            TenDanhSachDAT: query || "",
+          });
+          await newTotal.save();
+        }
       }
     }
 
     const khoahocArray = req.query.khoahoc;
 
     let queryObj = {};
-    if (query) {
-      queryObj.TenDanhSachDAT = tenDanhSachFilter;
+    if (query && query !== "all") {
+      // Lọc các học viên thuộc danh sách được chọn
+      queryObj.MaHocVien = { $in: studentIds };
     }
 
     const distinctKhoaHoc = await Total.distinct("KhoaHoc", queryObj);
-    const kh = distinctKhoaHoc.map(k => ({ KhoaHoc: k }));
+    const kh = distinctKhoaHoc.map((k) => ({ KhoaHoc: k }));
 
     const distinctTenDanhSach = await DAT.distinct("TenDanhSachDAT").lean();
 
     if (khoahocArray) {
       const selectedKhoaHoc = Array.isArray(khoahocArray)
         ? khoahocArray
-        : khoahocArray
-        ? [khoahocArray]
-        : [];
+        : [khoahocArray];
       queryObj.KhoaHoc = { $in: selectedKhoaHoc };
-      const total = await Total.find(queryObj).lean();
-
-      res.render("total", {
-        total,
-        kh,
-        selectedKhoaHoc,
-        distinctTenDanhSach,
-        query,
-        missingStudents: missingStudents.join(", "),
-      });
-    } else {
-      const total = await Total.find(queryObj).lean();
-      res.render("total", {
-        total,
-        kh,
-        distinctTenDanhSach,
-        query,
-        missingStudents: missingStudents.join(", "),
-      });
     }
+
+    const total = await Total.find(queryObj).lean();
+
+    res.render("total", {
+      total,
+      kh,
+      selectedKhoaHoc: khoahocArray,
+      distinctTenDanhSach,
+      query,
+      missingStudents: missingStudents.join(", "),
+    });
   } catch (err) {
     console.error("Error computing data:", err);
     res.status(500).send("Internal Server Error");
@@ -1918,16 +1941,61 @@ router.get("/search/results", async (req, res) => {
     let results = [];
     let sessions = [];
     if (query) {
-      // Nếu có query, thực hiện tìm kiếm trong model Total
-      results = await Total.find({
+      const cleanQuery = query.trim();
+      const escapedQuery = escapeRegex(cleanQuery);
+      const nameRegex = new RegExp(escapedQuery, "i");
+
+      // Tìm kiếm các học viên phù hợp từ Total
+      let totalResults = await Total.find({
         $or: [
-          { HoTen: { $regex: query, $options: "i" } }, // Tìm kiếm mềm theo HoTen
-          { SoCMT: query }, // Tìm kiếm chính xác theo SoCMT
-          { MaHocVien: query },
+          { HoTen: nameRegex },
+          { SoCMT: cleanQuery },
+          { MaHocVien: cleanQuery },
         ],
       }).lean();
 
-      // Nếu tìm thấy kết quả trong model Total, tìm các phiên liên quan trong model Dat_session
+      const foundStudentIds = new Set(totalResults.map((r) => r.MaHocVien).filter(Boolean));
+
+      // Nếu chưa có trong Total, tìm thêm từ Dat_session và Student
+      if (foundStudentIds.size === 0) {
+        const sessionHits = await Dat_session.find({
+          $or: [{ HoTen: nameRegex }, { MaHocVien: cleanQuery }],
+        }).distinct("MaHocVien");
+        sessionHits.forEach((id) => { if (id) foundStudentIds.add(id); });
+
+        const studentHits = await Student.find({
+          $or: [{ HoTen: nameRegex }, { SoCMT: cleanQuery }, { MaHocVien: cleanQuery }],
+        }).distinct("MaHocVien");
+        studentHits.forEach((id) => { if (id) foundStudentIds.add(id); });
+      }
+
+      const cars = await Car.find({}).lean();
+      const finalResultsMap = new Map();
+
+      // Với mỗi mã học viên tìm được, luôn lấy tổng hợp đầy đủ từ TẤT CẢ các phiên của học viên đó
+      for (const studentId of foundStudentIds) {
+        const allStudentSessions = await Dat_session.find({ MaHocVien: studentId }).lean();
+        const studentDoc = await Student.findOne({ MaHocVien: studentId }).lean();
+
+        if (allStudentSessions.length > 0) {
+          // Tính tổng hợp chính xác trên toàn bộ các phiên
+          const aggregated = computeStudentMetrics(studentId, allStudentSessions, studentDoc, cars);
+          finalResultsMap.set(studentId, aggregated);
+
+          // Cập nhật lại vào Total để loại bỏ các bản ghi trùng lặp cũ
+          await Total.deleteMany({ MaHocVien: studentId });
+          await Total.create(aggregated);
+        } else {
+          const existing = totalResults.find((r) => r.MaHocVien === studentId);
+          if (existing) {
+            finalResultsMap.set(studentId, existing);
+          }
+        }
+      }
+
+      results = Array.from(finalResultsMap.values());
+
+      // Lấy toàn bộ các phiên liên quan của tất cả học viên trong kết quả tìm kiếm
       if (results.length > 0) {
         const studentIds = results.map((result) => result.MaHocVien);
         sessions = await Dat_session.find({
@@ -1958,16 +2026,25 @@ router.get("/search/results", async (req, res) => {
 
 router.get("/studentDetails/:id", async (req, res) => {
   const id = req.params.id;
-  let sessions = [];
-  let results = [];
+  try {
+    const cars = await Car.find({}).lean();
+    const allStudentSessions = await Dat_session.find({ MaHocVien: id }).lean();
+    const studentDoc = await Student.findOne({ MaHocVien: id }).lean();
 
-  results = await Total.find({ MaHocVien: id }).lean();
+    let results = [];
+    if (allStudentSessions.length > 0) {
+      const aggregated = computeStudentMetrics(id, allStudentSessions, studentDoc, cars);
+      results = [aggregated];
+      await Total.deleteMany({ MaHocVien: id });
+      await Total.create(aggregated);
+    } else {
+      results = await Total.find({ MaHocVien: id }).lean();
+      if (results.length > 1) {
+        results = [results[0]];
+      }
+    }
 
-  if (results.length > 0) {
-    const studentIds = results.map((result) => result.MaHocVien);
-    sessions = await Dat_session.find({ MaHocVien: { $in: studentIds } }).lean();
-
-    // Sắp xếp các phiên học theo STT từ nhỏ đến lớn (1 -> N)
+    let sessions = allStudentSessions;
     sessions.sort((a, b) => {
       const diff = (parseInt(a.STT, 10) || 0) - (parseInt(b.STT, 10) || 0);
       if (diff !== 0) return diff;
@@ -1975,19 +2052,31 @@ router.get("/studentDetails/:id", async (req, res) => {
       const timeB = moment(b.NgayDaoTao, ["DD/MM/YYYY HH:mm:ss", "DD/MM/YY HH:mm", "YYYY-MM-DD HH:mm:ss"]).valueOf();
       return (timeA || 0) - (timeB || 0);
     });
-  }
 
-  res.render("search", { results, sessions });
+    res.render("search", { results, sessions });
+  } catch (error) {
+    console.error("Error in studentDetails:", error);
+    res.status(500).send("Internal Server Error");
+  }
 });
 
 router.get("/filter", async (req, res) => {
   const { trangthai, khoahoc } = req.query;
 
   const courses = await dateDAT.find({}).lean();
-  const tt = await Total.find({
+  let tt = await Total.find({
     TrangThai: trangthai,
     KhoaHoc: khoahoc,
   }).lean();
+
+  // Khử trùng lặp theo MaHocVien
+  const uniqueMap = new Map();
+  for (const item of tt) {
+    if (!uniqueMap.has(item.MaHocVien)) {
+      uniqueMap.set(item.MaHocVien, item);
+    }
+  }
+  tt = Array.from(uniqueMap.values());
 
   res.render("search", { tt, courses, khoahoc, trangthai });
 });
@@ -2119,6 +2208,16 @@ router.delete("/deleteComputeData", async (req, res) => {
   const { tenDanhSach } = req.query;
   if (!tenDanhSach) {
     return res.status(400).send("tenDanhSach is required");
+  }
+
+  if (tenDanhSach === "all") {
+    try {
+      await Total.deleteMany({});
+      return res.status(200).send("Deleted successfully");
+    } catch (err) {
+      console.error("Error deleting all total data:", err);
+      return res.status(500).send("Error deleting data");
+    }
   }
 
   const cleanName = String(tenDanhSach).trim();

@@ -269,8 +269,13 @@
 document.getElementById('duyet').addEventListener('click', function () {
     const checkboxes = document.querySelectorAll('input[name="sessionIds"]:checked');
     const selectedIds = Array.from(checkboxes).map(cb => cb.value);
-    const sslist = document.querySelectorAll('input[name="sessionlist"]')
+    const sslist = document.querySelectorAll('input[name="sessionlist"]');
     const queryValue = document.getElementById('query').value;
+
+    if (selectedIds.length === 0) {
+        alert('Vui lòng chọn ít nhất một phiên cần duyệt!');
+        return;
+    }
 
     fetch('/updateSession', {
         method: 'POST',
@@ -280,7 +285,7 @@ document.getElementById('duyet').addEventListener('click', function () {
         body: JSON.stringify({ sessionIds: selectedIds })
     }).then(response => {
         if (response.ok) {
-            const sslistValues = Array.from(sslist).map(input => input.value);
+            const sslistValues = [...new Set(Array.from(sslist).map(input => input.value.trim()).filter(Boolean))];
             const sslistQueryString = encodeURIComponent(sslistValues.join(','));
 
             // Redirect to computeData first

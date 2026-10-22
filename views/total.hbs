@@ -159,6 +159,7 @@
                 <label for="tenDanhSach">Chọn danh sách phiên học:</label>
                     <select id="tenDanhSach" name="tenDanhSach" onchange="document.getElementById('computedat').submit();">
                         <option value="">Chọn...</option>
+                        <option value="all" {{#if (eq query 'all')}}selected{{/if}}>Tất cả danh sách (Cộng dồn học viên)</option>
                         {{#each distinctTenDanhSach}}
                             <option value="{{this}}" {{#if (eq this ../query)}}selected{{/if}}>{{this}}</option>
                         {{/each}}
