@@ -14,6 +14,7 @@ const Car = require("../model/car");
 const dateDAT = require("../model/dateDAT");
 const studentDateDAT = require("../model/studentDateDAT");
 const excel = require("excel4node");
+const { getSessionDistanceMetrics, roundDistance } = require("../lib/sessionMetrics");
 
 function cleanCarPlate(plate) {
   if (!plate) return "";
@@ -618,8 +619,8 @@ router.get("/save-dat-session", async (req, res) => {
     // Thêm thông tin tính toán vào mục dữ liệu
     item.TotalMorningTime = thoiGianSang;
     item.TotalEveningTime = thoiGianToi;
-    item.TotalMorningDistance = quangDuongSang.toFixed(2);
-    item.TotalEveningDistance = quangDuongToi.toFixed(2);
+    item.TotalMorningDistance = quangDuongSang;
+    item.TotalEveningDistance = quangDuongToi;
 
     const ngayDaoTao = moment(item.NgayDaoTao, ["DD/MM/YYYY HH:mm:ss", "DD/MM/YY HH:mm"]);
     // Tạo một mảng để lưu trữ các lý do
@@ -750,8 +751,8 @@ router.get("/save-dat-session", async (req, res) => {
       STT: item.STT,
       TotalMorningTime: thoiGianSang,
       TotalEveningTime: thoiGianToi,
-      TotalMorningDistance: quangDuongSang.toFixed(2),
-      TotalEveningDistance: quangDuongToi.toFixed(2),
+      TotalMorningDistance: quangDuongSang,
+      TotalEveningDistance: quangDuongToi,
     });
 
     // Save to database
@@ -1326,14 +1327,15 @@ function computeStudentMetrics(studentId, studentSessions, student, cars, tenDan
     if (autoTime === 0 && autoDist === 0 && s.XeTapLai) {
       const matchedCar = findMatchingCar(cars, s.XeTapLai);
       if (matchedCar && isAutoCar(matchedCar.LoaiHangXe)) {
-        autoTime = (Number(s.TotalMorningTime) || 0) + (Number(s.TotalEveningTime) || 0);
-        autoDist =
-          parseFloat(s.QuangDuong) ||
-          (Number(s.TotalMorningDistance) || 0) + (Number(s.TotalEveningDistance) || 0);
+        autoTime = parseDuration(s.ThoiGian);
+        autoDist = getSessionDistanceMetrics(s, autoTime).totalDistance;
       }
     }
     return { autoTime, autoDist };
   };
+
+  const getSessionDistances = (session) =>
+    getSessionDistanceMetrics(session, parseDuration(session.ThoiGian));
 
   let category = "Unknown";
   studentSessions.forEach((session) => {
@@ -1388,10 +1390,11 @@ function computeStudentMetrics(studentId, studentSessions, student, cars, tenDan
 
   studentSessions.forEach((col) => {
     const { autoTime, autoDist } = getSessionAutoMetrics(col);
+    const { morningDistance, eveningDistance, totalDistance } = getSessionDistances(col);
     const mTime = Number(col.TotalMorningTime) || 0;
     const eTime = Number(col.TotalEveningTime) || 0;
-    const mDist = Number(col.TotalMorningDistance) || 0;
-    const eDist = Number(col.TotalEveningDistance) || 0;
+    const mDist = morningDistance;
+    const eDist = eveningDistance;
 
     displayMorningTime += mTime;
     displayEveningTime += eTime;
@@ -1400,7 +1403,7 @@ function computeStudentMetrics(studentId, studentSessions, student, cars, tenDan
     displayMorningDistance += mDist;
     displayEveningDistance += eDist;
     displayTotalDuration += mTime + eTime;
-    displayTotalDistance += mDist + eDist;
+    displayTotalDistance += totalDistance;
     if (col.XeTapLai) xeTapLaiSet.add(col.XeTapLai);
   });
 
@@ -1418,10 +1421,11 @@ function computeStudentMetrics(studentId, studentSessions, student, cars, tenDan
 
   validSessions.forEach((col) => {
     const { autoTime, autoDist } = getSessionAutoMetrics(col);
+    const { morningDistance, eveningDistance, totalDistance } = getSessionDistances(col);
     const mTime = Number(col.TotalMorningTime) || 0;
     const eTime = Number(col.TotalEveningTime) || 0;
-    const mDist = Number(col.TotalMorningDistance) || 0;
-    const eDist = Number(col.TotalEveningDistance) || 0;
+    const mDist = morningDistance;
+    const eDist = eveningDistance;
 
     validMorningTime += mTime;
     validEveningTime += eTime;
@@ -1430,7 +1434,7 @@ function computeStudentMetrics(studentId, studentSessions, student, cars, tenDan
     validMorningDistance += mDist;
     validEveningDistance += eDist;
     validTotalDuration += mTime + eTime;
-    validTotalDistance += mDist + eDist;
+    validTotalDistance += totalDistance;
   });
 
   // Số liệu dùng để xét duyệt (chỉ trừ trần B11 từ số liệu hợp lệ nếu có)
@@ -1537,13 +1541,13 @@ function computeStudentMetrics(studentId, studentSessions, student, cars, tenDan
     GioiTinh: student ? student.GioiTinh : (firstSession.GioiTinh || ""),
     SoCMT: student ? student.SoCMT : (firstSession.SoCMT || ""),
     TongThoiGianXeSoTuDong: formatTime(displayAutoTime),
-    TongQuangDuongXeSoTuDong: displayAutoDist.toFixed(2),
+    TongQuangDuongXeSoTuDong: roundDistance(displayAutoDist),
     TotalMorningTime: formatTime(displayMorningTime),
     TotalEveningTime: formatTime(displayEveningTime),
-    TotalMorningDistance: displayMorningDistance.toFixed(2),
-    TotalEveningDistance: displayEveningDistance.toFixed(2),
+    TotalMorningDistance: roundDistance(displayMorningDistance),
+    TotalEveningDistance: roundDistance(displayEveningDistance),
     TotalDuration: formatTime(displayTotalDuration),
-    TotalDistance: displayTotalDistance.toFixed(2),
+    TotalDistance: roundDistance(displayTotalDistance),
     Category: category,
     TrangThai: studentStatus,
     LyDo: reasons.join(", "),
