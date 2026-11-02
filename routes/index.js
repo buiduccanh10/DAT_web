@@ -1484,21 +1484,23 @@ function computeStudentMetrics(studentId, studentSessions, student, cars, tenDan
     if (countedValidDuration < 720) reasons.push("Thời gian chưa đạt 12 giờ");
     if (countedValidDistance < 710) reasons.push("Quãng đường chưa đạt 710km");
     if (validEveningTime < 150) reasons.push("Thời gian tối chưa đạt 2.5 giờ");
-    if (validEveningTime > 300) reasons.push("Thời gian tối quá 5 giờ");
+    if (displayEveningTime > 300) reasons.push("Thời gian tối quá 5 giờ");
     if (validEveningDistance < 100) reasons.push("Quãng đường tối chưa đạt 100km");
   } else if (category === "B2") {
     if (validAutoDist < 60) reasons.push("Chưa đi đủ quãng đường B11 (tối thiểu 60km)");
+    if (validAutoTime < 90) reasons.push("Chưa đi đủ thời gian B11 (tối thiểu 1.5 giờ)");
     if (countedValidDuration < 1200) reasons.push("Thời gian chưa đạt 20 giờ");
     if (countedValidDistance < 810) reasons.push("Quãng đường chưa đạt 810km");
     if (validEveningTime < 150) reasons.push("Thời gian tối chưa đạt 2.5 giờ");
-    if (validEveningTime > 300) reasons.push("Thời gian tối quá 5 giờ");
+    if (displayEveningTime > 300) reasons.push("Thời gian tối quá 5 giờ");
     if (validEveningDistance < 100) reasons.push("Quãng đường tối chưa đạt 100km");
   } else if (category === "C") {
     if (validAutoDist < 40) reasons.push("Chưa đi đủ quãng đường B11 (tối thiểu 40km)");
+    if (validAutoTime < 60) reasons.push("Chưa đi đủ thời gian B11 (tối thiểu 1 giờ)");
     if (countedValidDuration < 1440) reasons.push("Thời gian chưa đạt 24 giờ");
     if (countedValidDistance < 825) reasons.push("Quãng đường chưa đạt 825km");
     if (validEveningTime < 150) reasons.push("Thời gian tối chưa đạt 2.5 giờ");
-    if (validEveningTime > 300) reasons.push("Thời gian tối quá 5 giờ");
+    if (displayEveningTime > 300) reasons.push("Thời gian tối quá 5 giờ");
     if (validEveningDistance < 70) reasons.push("Quãng đường tối chưa đạt 70km");
   }
 
@@ -1509,6 +1511,16 @@ function computeStudentMetrics(studentId, studentSessions, student, cars, tenDan
   const avgSpeed = countedValidDuration > 0 ? countedValidDistance / (countedValidDuration / 60) : 0;
   if (countedValidDuration > 0 && avgSpeed < 25) {
     reasons.push("Tốc độ trung bình dưới 25km/h");
+  }
+
+  const invalidSession = studentSessions.find((s) => s.TrangThai === true);
+  if (invalidSession) {
+    const reasonText = invalidSession.LyDoLoai
+      ? `Có phiên bị bảo lưu (${invalidSession.LyDoLoai})`
+      : "Có phiên học bị bảo lưu";
+    if (!reasons.includes(reasonText)) {
+      reasons.push(reasonText);
+    }
   }
 
   let studentStatus = reasons.length > 0;
