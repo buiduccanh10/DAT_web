@@ -14,7 +14,7 @@ const Car = require("../model/car");
 const dateDAT = require("../model/dateDAT");
 const studentDateDAT = require("../model/studentDateDAT");
 const excel = require("excel4node");
-const { getSessionDistanceMetrics, roundDistance } = require("../lib/sessionMetrics");
+const { getSessionDistanceMetrics, roundDistance, formatTime, parseDuration } = require("../lib/sessionMetrics");
 
 function cleanCarPlate(plate) {
   if (!plate) return "";
@@ -585,7 +585,7 @@ router.get("/save-dat-session", async (req, res) => {
 
     // Đọc thời gian lái xe ban đêm trực tiếp từ file DAT (giờ thập phân -> phút)
     const thoiGianBanDemGio = parseFloat(item.ThoiGianBanDem) || 0;
-    const thoiGianToi = Math.round(thoiGianBanDemGio * 60);
+    const thoiGianToi = thoiGianBanDemGio * 60;
     const thoiGianSang = Math.max(thoiGianPhut - thoiGianToi, 0);
 
     // Quãng đường sáng/tối chia theo tỉ lệ thời gian (file không có cột km đêm riêng)
@@ -609,7 +609,7 @@ router.get("/save-dat-session", async (req, res) => {
       quangDuongXeTuDong = tongQuangDuong;
     } else {
       const thoiGianXeTuDongGio = parseFloat(item.ThoiGianXeTuDong) || 0;
-      thoiGianXeTuDong = Math.round(thoiGianXeTuDongGio * 60);
+      thoiGianXeTuDong = thoiGianXeTuDongGio * 60;
       quangDuongXeTuDong =
         thoiGianPhut > 0
           ? (tongQuangDuong * thoiGianXeTuDong) / thoiGianPhut
@@ -1334,6 +1334,24 @@ function computeStudentMetrics(studentId, studentSessions, student, cars, tenDan
     return { autoTime, autoDist };
   };
 
+  const getSessionTimes = (col) => {
+    let mTime = Number(col.TotalMorningTime) || 0;
+    let eTime = Number(col.TotalEveningTime) || 0;
+    if (col.ThoiGian) {
+      const rawSessionDuration = parseDuration(col.ThoiGian);
+      const currentSum = mTime + eTime;
+      if (rawSessionDuration > 0 && Math.abs(rawSessionDuration - currentSum) > 0.001) {
+        if (currentSum > 0) {
+          mTime = (mTime / currentSum) * rawSessionDuration;
+          eTime = rawSessionDuration - mTime;
+        } else {
+          mTime = rawSessionDuration;
+        }
+      }
+    }
+    return { mTime, eTime };
+  };
+
   const getSessionDistances = (session) =>
     getSessionDistanceMetrics(session, parseDuration(session.ThoiGian));
 
@@ -1356,13 +1374,13 @@ function computeStudentMetrics(studentId, studentSessions, student, cars, tenDan
       NgaySinh: student ? student.NgaySinh : "",
       GioiTinh: student ? student.GioiTinh : "",
       SoCMT: student ? student.SoCMT : "",
-      TongThoiGianXeSoTuDong: "0h00",
+      TongThoiGianXeSoTuDong: "0h",
       TongQuangDuongXeSoTuDong: "0.00",
-      TotalMorningTime: "0h00",
-      TotalEveningTime: "0h00",
+      TotalMorningTime: "0h",
+      TotalEveningTime: "0h",
       TotalMorningDistance: "0.00",
       TotalEveningDistance: "0.00",
-      TotalDuration: "0h00",
+      TotalDuration: "0h",
       TotalDistance: "0.00",
       Category: category,
       TrangThai: true,
@@ -1391,8 +1409,7 @@ function computeStudentMetrics(studentId, studentSessions, student, cars, tenDan
   studentSessions.forEach((col) => {
     const { autoTime, autoDist } = getSessionAutoMetrics(col);
     const { morningDistance, eveningDistance, totalDistance } = getSessionDistances(col);
-    const mTime = Number(col.TotalMorningTime) || 0;
-    const eTime = Number(col.TotalEveningTime) || 0;
+    const { mTime, eTime } = getSessionTimes(col);
     const mDist = morningDistance;
     const eDist = eveningDistance;
 
@@ -1422,8 +1439,7 @@ function computeStudentMetrics(studentId, studentSessions, student, cars, tenDan
   validSessions.forEach((col) => {
     const { autoTime, autoDist } = getSessionAutoMetrics(col);
     const { morningDistance, eveningDistance, totalDistance } = getSessionDistances(col);
-    const mTime = Number(col.TotalMorningTime) || 0;
-    const eTime = Number(col.TotalEveningTime) || 0;
+    const { mTime, eTime } = getSessionTimes(col);
     const mDist = morningDistance;
     const eDist = eveningDistance;
 
@@ -1642,13 +1658,13 @@ router.get("/computeData", async (req, res) => {
             NgaySinh: student.NgaySinh,
             KhoaHoc: student.KhoaHoc,
             MaKhoaHoc: student.MaKhoaHoc,
-            TongThoiGianXeSoTuDong: "0h00",
+            TongThoiGianXeSoTuDong: "0h",
             TongQuangDuongXeSoTuDong: "0.00",
-            TotalMorningTime: "0h00",
-            TotalEveningTime: "0h00",
+            TotalMorningTime: "0h",
+            TotalEveningTime: "0h",
             TotalMorningDistance: "0.00",
             TotalEveningDistance: "0.00",
-            TotalDuration: "0h00",
+            TotalDuration: "0h",
             TotalDistance: "0.00",
             Category: category,
             TrangThai: true,
@@ -1904,7 +1920,7 @@ router.post("/export-to-excel", (req, res) => {
       }
 
       ws.cell(rowIndex, 8)
-        .string(item["Tổng thời gian"])
+        .string(formatTime(item["Tổng thời gian"]))
         .style(cellNormalStyle);
 
       ws.cell(rowIndex, 9)
@@ -2370,37 +2386,6 @@ function convertToISODate(dateStr) {
 //   return hours * 60 + minutes;
 // }
 
-function parseDuration(duration) {
-  if (duration == null) return 0;
-
-  // File DAT mới: thời gian là số thập phân (giờ, vd 0.04, 1.5)
-  if (typeof duration === "number") {
-    return Math.round(duration * 60);
-  }
-
-  // File cũ / đã format: chuỗi "XhYY" (vd "1h30") hoặc chuỗi thập phân "1.5"
-  if (typeof duration === "string") {
-    if (duration.includes("h")) {
-      const [hoursString, minutesString] = duration.split("h");
-      const hours = parseInt(hoursString, 10) || 0;
-      const minutes = parseInt(minutesString, 10) || 0;
-      return hours * 60 + minutes;
-    } else {
-      const parsedFloat = parseFloat(duration);
-      if (!isNaN(parsedFloat)) {
-        return Math.round(parsedFloat * 60);
-      }
-    }
-  }
-
-  return 0;
-}
-
-function formatTime(minutes) {
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  return `${hours}h${mins < 10 ? "0" : ""}${mins}`;
-}
 
 const formatDateString = (date) => {
   const d = new Date(date);
